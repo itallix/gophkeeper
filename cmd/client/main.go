@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/itallix/gophkeeper/internal/logger"
+	"gophkeeper.com/internal/logger"
 )
 
 func main() {
