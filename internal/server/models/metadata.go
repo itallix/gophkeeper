@@ -4,16 +4,17 @@ import (
 	"time"
 )
 
-type Visitor interface {
+type SecretVisitor interface {
 	VisitCard(card *Card) error
 	VisitLogin(login *Login) error
 	VisitNote(note *Note) error
 	VisitBinary(binary *Binary) error
+	GetResult() any
 }
 
 // Secret interface to implement double dispatch with algorithm decoupling.
 type Secret interface {
-	Accept(visitor Visitor) error
+	Accept(visitor SecretVisitor) error
 }
 
 // SecretMetadata represents secret metadata to be saved in DB.
@@ -36,7 +37,7 @@ type Login struct {
 	SecretMetadata
 }
 
-func (login *Login) Accept(v Visitor) error {
+func (login *Login) Accept(v SecretVisitor) error {
 	return v.VisitLogin(login)
 }
 
@@ -51,20 +52,20 @@ type Card struct {
 	SecretMetadata
 }
 
-func (card *Card) Accept(v Visitor) error {
+func (card *Card) Accept(v SecretVisitor) error {
 	return v.VisitCard(card)
 }
 
 type Note struct {
 }
 
-func (note *Note) Accept(v Visitor) error {
+func (note *Note) Accept(v SecretVisitor) error {
 	return v.VisitNote(note)
 }
 
 type Binary struct {
 }
 
-func (binary *Binary) Accept(v Visitor) error {
+func (binary *Binary) Accept(v SecretVisitor) error {
 	return v.VisitBinary(binary)
 }
