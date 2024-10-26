@@ -1,0 +1,26 @@
+syntax = "proto3";
+package api.v1;
+option go_package = "gophkeeper/pkg/generated/v1";
+
+service GophkeeperService {
+    // unauthenticated APIs
+    rpc Login(LoginRequest) returns (AuthResponse) {}
+    rpc Register(RegisterRequest) returns (AuthResponse) {}
+
+    // authenticated APIs
+}
+
+message RegisterRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message LoginRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message AuthResponse {
+    string token = 1;
+    string user_id = 2;
+}

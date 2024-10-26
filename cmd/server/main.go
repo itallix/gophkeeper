@@ -3,13 +3,20 @@ package main
 import (
 	"context"
 	"log"
+	"net"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 
-	"gophkeeper.com/internal/logger"
 	"gophkeeper.com/internal/server"
+	v1 "gophkeeper.com/internal/server/api/v1"
 	"gophkeeper.com/internal/server/models"
+	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
+	"gophkeeper.com/internal/server/storage"
+	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"gophkeeper.com/pkg/logger"
 )
 
 func main() {
@@ -22,6 +29,11 @@ func main() {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection pool: %s", err)
+	}
+
+	objectStorage, err := s3.NewObjectStorage()
+	if err != nil {
+		log.Fatalf("Failed to initialize object storage: %s", err)
 	}
 
 	kms, err := service.NewRSAKMS()
@@ -72,7 +84,7 @@ func main() {
 		},
 	)
 
-	vault := server.NewVault(ctx, pool, encryptionService)
+	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
 
 	if err = vault.StoreSecret("vitalii", "jwt", login); err != nil {
 		log.Fatalf("Failed to process login: %s", err)
@@ -118,4 +130,18 @@ func main() {
 
 	names, _ := vault.ListSecrets("vitalii", "jwt", retrieveCard)
 	logger.Log().Infof("cards=%v", names)
+
+	lis, err := net.Listen("tcp", "localhost:8081")
+	if err != nil {
+		log.Fatalf("failed to run gRPC server: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	userRepo := storage.NewUserRepo(pool)
+	pb.RegisterGophkeeperServiceServer(grpcServer, v1.NewGophkeeperServer(service.NewJWTAuthService(
+		userRepo, []byte("secret"), 1*time.Hour,
+	), userRepo))
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Fatalf("cannot serve gRPC server: %v", err)
+	}
 }

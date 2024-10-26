@@ -91,6 +91,16 @@ func (s *Lister) VisitNote(_ *models.Note) error {
 }
 
 func (s *Lister) VisitBinary(_ *models.Binary) error {
+	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
+	defer cancel()
+
+	selectSQL := "SELECT path FROM binaries b INNER JOIN secrets s ON b.secret_id = s.secret_id"
+	secrets, err := listSecrets(ctx, s.pool, selectSQL, "[LIST BINARIES]")
+	if err != nil {
+		return err
+	}
+
+	s.result = secrets
 	return nil
 }
 

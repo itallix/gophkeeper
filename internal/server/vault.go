@@ -7,28 +7,32 @@ import (
 
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/operation"
-	"gophkeeper.com/internal/server/operation/storage"
+	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
+	"gophkeeper.com/internal/server/storage"
 )
 
 type Vault struct {
-	ctx           context.Context
-	pool          *pgxpool.Pool
-	encryptionSrv service.EncryptionService
+	ctx               context.Context
+	pool              *pgxpool.Pool
+	objectStorage     *s3.ObjectStorage
+	encryptionService service.EncryptionService
 }
 
-func NewVault(ctx context.Context, pool *pgxpool.Pool, encryptionSrv service.EncryptionService) *Vault {
+func NewVault(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectStorage,
+	encryptionService service.EncryptionService) *Vault {
 	return &Vault{
-		ctx:           ctx,
-		pool:          pool,
-		encryptionSrv: encryptionSrv,
+		ctx:               ctx,
+		pool:              pool,
+		objectStorage:     objectStorage,
+		encryptionService: encryptionService,
 	}
 }
 
 func (v *Vault) StoreSecret(user, token string, secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
 		WithValidation().
-		WithEncryption(v.encryptionSrv).
+		WithEncryption(v.encryptionService).
 		WithStorageCreator(v.ctx, v.pool).
 		Build()
 
@@ -41,7 +45,7 @@ func (v *Vault) StoreSecret(user, token string, secret models.Secret) error {
 func (v *Vault) RetrieveSecret(user, token string, secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
 		WithStorageRetriever(v.ctx, v.pool).
-		WithDecryption(v.encryptionSrv).
+		WithDecryption(v.encryptionService).
 		Build()
 
 	if err := op.Process(secret); err != nil {

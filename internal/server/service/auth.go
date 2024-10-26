@@ -1,49 +1,58 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+
+	"gophkeeper.com/internal/server/storage"
 )
 
 // AuthenticationService handles user authentication.
 type AuthenticationService interface {
-	Authenticate(username, password string) (string, error)
-	ValidateToken(token string) (bool, error)
+	GetToken(username string) (string, error)
+	Authenticate(ctx context.Context, username, password string) (string, error)
+	ValidateToken(token string) (string, error)
 }
 
 type JWTAuthService struct {
-	users    map[string]string // username -> hashed password
+	userRepo *storage.UserRepo
 	jwtKey   []byte
 	tokenTTL time.Duration
 }
 
-func NewJWTAuthService(jwtKey []byte, tokenTTL time.Duration) *JWTAuthService {
+func NewJWTAuthService(userRepo *storage.UserRepo, jwtKey []byte, tokenTTL time.Duration) *JWTAuthService {
 	return &JWTAuthService{
-		users:    make(map[string]string),
+		userRepo: userRepo,
 		jwtKey:   jwtKey,
 		tokenTTL: tokenTTL,
 	}
 }
 
-func (s *JWTAuthService) RegisterUser(username, password string) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func (s *JWTAuthService) GetToken(username string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"username": username,
+		"exp":      time.Now().Add(s.tokenTTL).Unix(),
+	})
+
+	tokenString, err := token.SignedString(s.jwtKey)
 	if err != nil {
-		return err
+		return "", err
 	}
-	s.users[username] = string(hashedPassword)
-	return nil
+
+	return tokenString, nil
 }
 
-func (s *JWTAuthService) Authenticate(username, password string) (string, error) {
-	hashedPassword, ok := s.users[username]
-	if !ok {
+func (s *JWTAuthService) Authenticate(ctx context.Context, username, password string) (string, error) {
+	hashedPassword, err := s.userRepo.GetPasswordHash(ctx, username)
+	if err != nil {
 		return "", errors.New("user not found")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
 		return "", errors.New("invalid credentials")
 	}
 

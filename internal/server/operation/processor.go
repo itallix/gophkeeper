@@ -7,8 +7,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/operation/storage"
 	"gophkeeper.com/internal/server/service"
+	"gophkeeper.com/internal/server/storage"
 )
 
 type SecretProcessor struct {

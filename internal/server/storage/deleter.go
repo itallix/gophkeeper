@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gophkeeper.com/internal/logger"
 	"gophkeeper.com/internal/server/models"
+	"gophkeeper.com/pkg/logger"
 )
 
 type Deleter struct {

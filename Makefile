@@ -34,3 +34,21 @@ test:
 .PHONY: build-server
 build-server:
 	go build -o ./bin/server ./cmd/server
+
+.PHONY: run-server
+run-server:
+	./bin/server
+
+.PHONY: build-client
+build-client:
+	go build -o ./bin/client ./cmd/client
+
+.PHONY: run-client
+run-client:
+	./bin/client
+
+.PHONY: generate
+generate:
+	protoc --go_out=pkg/generated --go_opt=paths=source_relative \
+		--go-grpc_out=pkg/generated --go-grpc_opt=paths=source_relative \
+		api/proto/v1/*.proto
