@@ -46,8 +46,8 @@ type Card struct {
 	CardholderName string
 	Number         []byte
 	ExpiryMonth    int8
-	ExpiryYear     int8
-	Cvc            []byte
+	ExpiryYear     int16
+	CVC            []byte
 
 	SecretMetadata
 }

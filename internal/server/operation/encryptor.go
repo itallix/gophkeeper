@@ -44,11 +44,11 @@ func (enc *Encryptor) VisitCard(card *models.Card) error {
 	card.Number = append([]byte(nil), buf.Bytes()...)
 	buf.Reset()
 
-	err = enc.encryptionService.EncryptStreamWithKey(bytes.NewReader(card.Cvc), &buf, dataKey)
+	err = enc.encryptionService.EncryptStreamWithKey(bytes.NewReader(card.CVC), &buf, dataKey)
 	if err != nil {
 		return fmt.Errorf("cannot encrypt cvc code: %w", err)
 	}
-	card.Cvc = buf.Bytes()
+	card.CVC = buf.Bytes()
 
 	return nil
 }

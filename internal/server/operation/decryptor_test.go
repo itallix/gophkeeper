@@ -94,7 +94,7 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			name: "successful card decryption",
 			card: &models.Card{
 				Number: []byte("encryptednumber"),
-				Cvc:    []byte("encryptedcvc"),
+				CVC:    []byte("encryptedcvc"),
 				SecretMetadata: models.SecretMetadata{
 					EncryptedDataKey: []byte("encrypteddatakey"),
 				},
@@ -124,7 +124,7 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			name: "card number decryption failure",
 			card: &models.Card{
 				Number: []byte("encryptednumber"),
-				Cvc:    []byte("encryptedcvc"),
+				CVC:    []byte("encryptedcvc"),
 				SecretMetadata: models.SecretMetadata{
 					EncryptedDataKey: []byte("encrypteddatakey"),
 				},
@@ -141,7 +141,7 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			name: "cvc decryption failure",
 			card: &models.Card{
 				Number: []byte("encryptednumber"),
-				Cvc:    []byte("encryptedcvc"),
+				CVC:    []byte("encryptedcvc"),
 				SecretMetadata: models.SecretMetadata{
 					EncryptedDataKey: []byte("encrypteddatakey"),
 				},
@@ -178,7 +178,7 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedNumber, tt.card.Number)
-				assert.Equal(t, tt.expectedCvc, tt.card.Cvc)
+				assert.Equal(t, tt.expectedCvc, tt.card.CVC)
 			}
 
 			mockService.AssertExpectations(t)

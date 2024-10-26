@@ -30,6 +30,7 @@ func NewRSAKMS() (*RSAKMS, error) {
 
 const DataKeyLength = 32
 
+// GenerateDataKey returns generated data key as is and it's encrypted with master key version.
 func (kms *RSAKMS) GenerateDataKey() ([]byte, []byte, error) {
 	dataKey := make([]byte, DataKeyLength)
 	_, err := rand.Read(dataKey)
@@ -52,6 +53,7 @@ func (kms *RSAKMS) GenerateDataKey() ([]byte, []byte, error) {
 	return dataKey, encryptedDataKey, nil
 }
 
+// DecryptDataKey decrypts encrypted data key using master key.
 func (kms *RSAKMS) DecryptDataKey(encryptedDataKey []byte) ([]byte, error) {
 	return rsa.DecryptOAEP(
 		sha256.New(),

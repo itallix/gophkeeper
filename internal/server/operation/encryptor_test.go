@@ -82,7 +82,7 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			name: "successful card encryption",
 			card: &models.Card{
 				Number: []byte("4111111111111111"),
-				Cvc:    []byte("123"),
+				CVC:    []byte("123"),
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
@@ -109,7 +109,7 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			name: "card number encryption failure",
 			card: &models.Card{
 				Number: []byte("4111111111111111"),
-				Cvc:    []byte("123"),
+				CVC:    []byte("123"),
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
@@ -122,7 +122,7 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			name: "cvc encryption failure",
 			card: &models.Card{
 				Number: []byte("4111111111111111"),
-				Cvc:    []byte("123"),
+				CVC:    []byte("123"),
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
@@ -151,7 +151,7 @@ func TestEncryptor_VisitCard(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, []byte("encrypteddatakey"), tt.card.EncryptedDataKey)
 				assert.Equal(t, tt.expectedNumber, tt.card.Number)
-				assert.Equal(t, tt.expectedCvc, tt.card.Cvc)
+				assert.Equal(t, tt.expectedCvc, tt.card.CVC)
 			}
 
 			mockService.AssertExpectations(t)

@@ -43,11 +43,11 @@ func (enc *Decryptor) VisitCard(card *models.Card) error {
 	card.Number = append([]byte(nil), buf.Bytes()...)
 	buf.Reset()
 
-	err = enc.encryptionService.DecryptStream(bytes.NewReader(card.Cvc), &buf, key)
+	err = enc.encryptionService.DecryptStream(bytes.NewReader(card.CVC), &buf, key)
 	if err != nil {
 		return fmt.Errorf("cannot decrypt cvc code: %w", err)
 	}
-	card.Cvc = buf.Bytes()
+	card.CVC = buf.Bytes()
 
 	return nil
 }

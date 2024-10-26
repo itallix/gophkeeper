@@ -36,10 +36,10 @@ func NewProcessorBuilder(visitors ...models.SecretVisitor) *ProcessorBuilder {
 	return &ProcessorBuilder{visitors: visitors}
 }
 
-// func (b *ProcessorBuilder) WithValidation() *ProcessorBuilder {
-//     b.visitors = append(b.visitors, NewValidator(ctx))
-//     return b
-// }
+func (b *ProcessorBuilder) WithValidation() *ProcessorBuilder {
+	b.visitors = append(b.visitors, NewValidator())
+	return b
+}
 
 func (b *ProcessorBuilder) WithEncryption(service service.EncryptionService) *ProcessorBuilder {
 	b.visitors = append(b.visitors, NewEncryptor(service))

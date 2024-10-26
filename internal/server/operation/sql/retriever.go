@@ -60,7 +60,7 @@ func (s *StorageRetriever) VisitCard(card *models.Card) error {
 			&card.Number,
 			&card.ExpiryMonth,
 			&card.ExpiryYear,
-			&card.Cvc,
+			&card.CVC,
 		)
 	if err != nil {
 		return fmt.Errorf("%s failed to query logins: %w", errPrefix, err)

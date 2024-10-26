@@ -136,7 +136,7 @@ func (s *StorageCreator) VisitCard(card *models.Card) error {
 		card.Number,
 		card.ExpiryMonth,
 		card.ExpiryYear,
-		card.Cvc,
+		card.CVC,
 	).Scan(&cardID); err != nil {
 		return fmt.Errorf("%s failed to insert card: %w", errPrefix, err)
 	}

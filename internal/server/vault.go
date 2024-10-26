@@ -1,33 +1,75 @@
 package server
 
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"gophkeeper.com/internal/server/models"
+	"gophkeeper.com/internal/server/operation"
+	"gophkeeper.com/internal/server/operation/sql"
+	"gophkeeper.com/internal/server/service"
+)
+
 type Vault struct {
+	ctx           context.Context
+	pool          *pgxpool.Pool
+	encryptionSrv service.EncryptionService
 }
 
-// // Main Vault methods
+func NewVault(ctx context.Context, pool *pgxpool.Pool, encryptionSrv service.EncryptionService) *Vault {
+	return &Vault{
+		ctx:           ctx,
+		pool:          pool,
+		encryptionSrv: encryptionSrv,
+	}
+}
 
-// Main Vault struct that ties everything together.
-// secretStore       storage.SecretStore
-// authService       service.AuthenticationService
-// encryptionService service.EncryptionService
-// auditLogService   service.AuditLogService
-// kms               service.KMS
-// func (v *Vault) StoreSecret(user, token, path string, data map[string]interface{}) error {
-// 	// Implement the logic to store a secret
-// 	// 1. Validate the token
-// 	// 2. Encrypt the data
-// 	// 3. Store the encrypted data
-// 	// 4. Log the operation
-// 	return nil
-// }
+func (v *Vault) StoreSecret(user, token string, secret models.Secret) error {
+	op := operation.NewProcessorBuilder().
+		WithValidation().
+		WithEncryption(v.encryptionSrv).
+		WithStorageCreator(v.ctx, v.pool).
+		Build()
 
-// func (v *Vault) RetrieveSecret(user, token, path string) (map[string]interface{}, error) {
-// 	// Implement the logic to retrieve a secret
-// 	// 1. Validate the token
-// 	// 2. Retrieve the encrypted data
-// 	// 3. Decrypt the data
-// 	// 4. Log the operation
-// 	return nil, nil
-// }
+	if err := op.Process(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *Vault) RetrieveSecret(user, token string, secret models.Secret) error {
+	op := operation.NewProcessorBuilder().
+		WithStorageRetriever(v.ctx, v.pool).
+		WithDecryption(v.encryptionSrv).
+		Build()
+
+	if err := op.Process(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *Vault) DeleteSecret(user, token string, secret models.Secret) error {
+	op := operation.NewProcessorBuilder().
+		WithStorageDeleter(v.ctx, v.pool).
+		Build()
+
+	if err := op.Process(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *Vault) ListSecrets(user, token string, secret models.Secret) ([]string, error) {
+	lister := sql.NewStorageLister(v.ctx, v.pool)
+
+	if err := secret.Accept(lister); err != nil {
+		return nil, err
+	}
+
+	return lister.GetResult().([]string), nil
+}
 
 // // Updated StoreFile method in Vault
 // func (v *Vault) StoreFile(username, token, path string, data io.Reader, metadata models.SecretMetadata) error {
