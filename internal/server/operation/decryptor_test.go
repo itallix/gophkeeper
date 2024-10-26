@@ -185,3 +185,70 @@ func TestDecryptor_VisitCard(t *testing.T) {
 		})
 	}
 }
+
+func TestDecryptor_VisitNote(t *testing.T) {
+	tests := []struct {
+		name         string
+		note         *models.Note
+		setupMock    func(*mocks.EncryptionService)
+		expectError  bool
+		expectedText []byte
+	}{
+		{
+			name: "successful decryption",
+			note: &models.Note{
+				Text: []byte("encryptedtext"),
+				SecretMetadata: models.SecretMetadata{
+					EncryptedDataKey: []byte("encrypteddatakey"),
+				},
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+						_, _ = dst.Write([]byte("decryptedtext"))
+					}).
+					Return(nil).
+					Once()
+			},
+			expectError:  false,
+			expectedText: []byte("decryptedtext"),
+		},
+		{
+			name: "decryption failure",
+			note: &models.Note{
+				Text: []byte("encryptedtext"),
+				SecretMetadata: models.SecretMetadata{
+					EncryptedDataKey: []byte("encrypteddatakey"),
+				},
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Return(errors.New("decryption failed")).
+					Once()
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := mocks.NewEncryptionService(t)
+			tt.setupMock(mockService)
+
+			visitor := operation.NewDecryptor(mockService)
+			err := visitor.VisitNote(tt.note)
+
+			if tt.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot decrypt note")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedText, tt.note.Text)
+			}
+
+			mockService.AssertExpectations(t)
+		})
+	}
+}

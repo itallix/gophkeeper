@@ -1,4 +1,4 @@
-package sql
+package storage
 
 import (
 	"context"
@@ -12,13 +12,13 @@ import (
 	"gophkeeper.com/internal/server/models"
 )
 
-type StorageDeleter struct {
+type Deleter struct {
 	pool    *pgxpool.Pool
 	context context.Context
 }
 
-func NewStorageDeleter(ctx context.Context, pool *pgxpool.Pool) *StorageDeleter {
-	return &StorageDeleter{
+func NewDeleter(ctx context.Context, pool *pgxpool.Pool) *Deleter {
+	return &Deleter{
 		context: ctx,
 		pool:    pool,
 	}
@@ -34,11 +34,11 @@ func deleteSecret(ctx context.Context, tx pgx.Tx, secretPath string) error {
 	return nil
 }
 
-func (s *StorageDeleter) VisitLogin(login *models.Login) error {
+func (s *Deleter) VisitLogin(login *models.Login) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[delete login]"
+	errPrefix := "[DELETE LOGIN]"
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
@@ -60,11 +60,11 @@ func (s *StorageDeleter) VisitLogin(login *models.Login) error {
 	return nil
 }
 
-func (s *StorageDeleter) VisitCard(card *models.Card) error {
+func (s *Deleter) VisitCard(card *models.Card) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[delete card]"
+	errPrefix := "[DELETE CARD]"
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
@@ -86,14 +86,36 @@ func (s *StorageDeleter) VisitCard(card *models.Card) error {
 	return nil
 }
 
-func (s *StorageDeleter) VisitNote(_ *models.Note) error {
+func (s *Deleter) VisitNote(note *models.Note) error {
+	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
+	defer cancel()
+
+	errPrefix := "[DELETE NOTE]"
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	if err = deleteSecret(ctx, tx, note.Path); err != nil {
+		return fmt.Errorf("%s: %w", errPrefix, err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%s failed to commit transaction: %w", errPrefix, err)
+	}
+
+	logger.Log().Infof("Note with path=[%s] has been successfully deleted.", note.Path)
+
 	return nil
 }
 
-func (s *StorageDeleter) VisitBinary(_ *models.Binary) error {
+func (s *Deleter) VisitBinary(_ *models.Binary) error {
 	return nil
 }
 
-func (s *StorageDeleter) GetResult() any {
+func (s *Deleter) GetResult() any {
 	return nil
 }

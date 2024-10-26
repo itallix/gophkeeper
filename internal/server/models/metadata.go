@@ -57,6 +57,10 @@ func (card *Card) Accept(v SecretVisitor) error {
 }
 
 type Note struct {
+	NoteID int64
+	Text   []byte
+
+	SecretMetadata
 }
 
 func (note *Note) Accept(v SecretVisitor) error {

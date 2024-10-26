@@ -63,7 +63,7 @@ func TestValidateLogin(t *testing.T) {
 			if tt.wantErr {
 				require.Error(t, err)
 				errs := strings.Split(err.Error(), "\n")
-				assert.Equal(t, errs, tt.errCount)
+				assert.Len(t, errs, tt.errCount)
 			} else {
 				require.NoError(t, err)
 			}

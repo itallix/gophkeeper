@@ -1,4 +1,4 @@
-package sql
+package storage
 
 import (
 	"context"
@@ -12,13 +12,13 @@ import (
 	"gophkeeper.com/internal/server/models"
 )
 
-type StorageCreator struct {
+type Creator struct {
 	pool    *pgxpool.Pool
 	context context.Context
 }
 
-func NewStorageCreator(ctx context.Context, pool *pgxpool.Pool) *StorageCreator {
-	return &StorageCreator{
+func NewCreator(ctx context.Context, pool *pgxpool.Pool) *Creator {
+	return &Creator{
 		context: ctx,
 		pool:    pool,
 	}
@@ -53,11 +53,11 @@ func createSecret(ctx context.Context, tx pgx.Tx, secret models.SecretMetadata) 
 	return secretID, nil
 }
 
-func (s *StorageCreator) VisitLogin(login *models.Login) error {
+func (s *Creator) VisitLogin(login *models.Login) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[create login]"
+	errPrefix := "[CREATE LOGIN]"
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
@@ -100,11 +100,11 @@ func (s *StorageCreator) VisitLogin(login *models.Login) error {
 	return nil
 }
 
-func (s *StorageCreator) VisitCard(card *models.Card) error {
+func (s *Creator) VisitCard(card *models.Card) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[create card]"
+	errPrefix := "[CREATE CARD]"
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
@@ -154,14 +154,53 @@ func (s *StorageCreator) VisitCard(card *models.Card) error {
 	return nil
 }
 
-func (s *StorageCreator) VisitNote(_ *models.Note) error {
+func (s *Creator) VisitNote(note *models.Note) error {
+	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
+	defer cancel()
+
+	errPrefix := "[CREATE NOTE]"
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	secretID, err := createSecret(ctx, tx, note.SecretMetadata)
+	if err != nil {
+		return fmt.Errorf("%s: %w", errPrefix, err)
+	}
+
+	insertSQL := `
+        INSERT INTO notes (secret_id, text) VALUES ($1, $2)
+		RETURNING note_id`
+
+	var noteID int64
+	if err = tx.QueryRow(ctx, insertSQL,
+		secretID,
+		note.Text,
+	).Scan(&noteID); err != nil {
+		return fmt.Errorf("%s failed to insert note: %w", errPrefix, err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("%s failed to commit transaction: %w", errPrefix, err)
+	}
+
+	// Update the login ID after successful insert
+	note.SecretID = secretID
+	note.NoteID = noteID
+
+	logger.Log().Infof("Note with path=[%s] has been successfully created.", note.Path)
+
 	return nil
 }
 
-func (s *StorageCreator) VisitBinary(_ *models.Binary) error {
+func (s *Creator) VisitBinary(_ *models.Binary) error {
 	return nil
 }
 
-func (s *StorageCreator) GetResult() any {
+func (s *Creator) GetResult() any {
 	return nil
 }

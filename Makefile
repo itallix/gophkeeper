@@ -30,3 +30,7 @@ lint:
 .PHONY: test
 test:
 	go test -v ./...
+
+.PHONY: build-server
+build-server:
+	go build -o ./bin/server ./cmd/server

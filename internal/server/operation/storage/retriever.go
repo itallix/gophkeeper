@@ -1,4 +1,4 @@
-package sql
+package storage
 
 import (
 	"context"
@@ -10,30 +10,30 @@ import (
 	"gophkeeper.com/internal/server/models"
 )
 
-type StorageRetriever struct {
+type Retriever struct {
 	pool    *pgxpool.Pool
 	context context.Context
 }
 
-func NewStorageRetriever(ctx context.Context, pool *pgxpool.Pool) *StorageRetriever {
-	return &StorageRetriever{
+func NewRetriever(ctx context.Context, pool *pgxpool.Pool) *Retriever {
+	return &Retriever{
 		context: ctx,
 		pool:    pool,
 	}
 }
 
-func (s *StorageRetriever) VisitLogin(login *models.Login) error {
+func (s *Retriever) VisitLogin(login *models.Login) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[retrieve login]"
-	loginSQL := `
+	errPrefix := "[RETRIEVE LOGIN]"
+	selectSQL := `
 	SELECT encrypted_data_key, login, password FROM logins l 
 	INNER JOIN secrets s ON l.secret_id = s.secret_id
 	WHERE s.path = $1
 	`
 
-	err := s.pool.QueryRow(ctx, loginSQL, login.Path).
+	err := s.pool.QueryRow(ctx, selectSQL, login.Path).
 		Scan(&login.EncryptedDataKey, &login.Login, &login.Password)
 	if err != nil {
 		return fmt.Errorf("%s failed to query logins: %w", errPrefix, err)
@@ -42,18 +42,18 @@ func (s *StorageRetriever) VisitLogin(login *models.Login) error {
 	return nil
 }
 
-func (s *StorageRetriever) VisitCard(card *models.Card) error {
+func (s *Retriever) VisitCard(card *models.Card) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	errPrefix := "[retrieve card]"
-	cardSQL := `
+	errPrefix := "[RETRIEVE CARD]"
+	selectSQL := `
 	SELECT encrypted_data_key, cardholder_name, number, expiry_month, expiry_year, cvc FROM cards c 
 	INNER JOIN secrets s ON c.secret_id = s.secret_id
 	WHERE s.path = $1
 	`
 
-	err := s.pool.QueryRow(ctx, cardSQL, card.Path).
+	err := s.pool.QueryRow(ctx, selectSQL, card.Path).
 		Scan(
 			&card.EncryptedDataKey,
 			&card.CardholderName,
@@ -69,14 +69,30 @@ func (s *StorageRetriever) VisitCard(card *models.Card) error {
 	return nil
 }
 
-func (s *StorageRetriever) VisitNote(_ *models.Note) error {
+func (s *Retriever) VisitNote(note *models.Note) error {
+	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
+	defer cancel()
+
+	errPrefix := "[RETRIEVE NOTE]"
+	selectSQL := `
+	SELECT encrypted_data_key, text FROM notes n 
+	INNER JOIN secrets s ON n.secret_id = s.secret_id
+	WHERE s.path = $1
+	`
+
+	err := s.pool.QueryRow(ctx, selectSQL, note.Path).
+		Scan(&note.EncryptedDataKey, &note.Text)
+	if err != nil {
+		return fmt.Errorf("%s failed to query notes: %w", errPrefix, err)
+	}
+
 	return nil
 }
 
-func (s *StorageRetriever) VisitBinary(_ *models.Binary) error {
+func (s *Retriever) VisitBinary(_ *models.Binary) error {
 	return nil
 }
 
-func (s *StorageRetriever) GetResult() any {
+func (s *Retriever) GetResult() any {
 	return nil
 }

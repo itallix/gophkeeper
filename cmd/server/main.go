@@ -29,29 +29,48 @@ func main() {
 		log.Fatalf("Failed to initialize kms: %s", err)
 	}
 	encryptionService := service.NewStreamEncryptionService(kms)
-	login := &models.Login{
-		SecretMetadata: models.SecretMetadata{
-			Path:       "login1",
-			CustomMeta: map[string]string{"attr1": "foo", "attr2": "boo"},
-			CreatedBy:  "vitalii",
-			ModifiedBy: "vitalii",
+	login := models.NewLogin(
+		[]models.SecretOption{
+			models.WithPath("login1"),
+			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
+			models.WithCreatedBy("vitalii"),
+			models.WithModifiedBy("vitalii"),
 		},
-		Login:    "vitalii",
-		Password: []byte("geheim"),
-	}
-	card := &models.Card{
-		SecretMetadata: models.SecretMetadata{
-			Path:       "card1",
-			CustomMeta: map[string]string{"attr1": "foo", "attr2": "boo"},
-			CreatedBy:  "vitalii",
-			ModifiedBy: "vitalii",
+		[]models.LoginOption{
+			models.WithLogin("vitalii"),
+			models.WithPassword("geheim"),
 		},
-		CardholderName: "Vitalii Karniushin",
-		Number:         []byte("2345548223450943"),
-		ExpiryMonth:    8,
-		ExpiryYear:     2027,
-		CVC:            []byte("345"),
-	}
+	)
+	card := models.NewCard(
+		[]models.SecretOption{
+			models.WithPath("card1"),
+			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
+			models.WithCreatedBy("vitalii"),
+			models.WithModifiedBy("vitalii"),
+		},
+		[]models.CardOption{
+			models.WithCardHolder("Vitalii Karniushin"),
+			models.WithCardNumber("2345548223450943"),
+			models.WithExpiry(8, 2027),
+			models.WithCVC("345"),
+		},
+	)
+	note := models.NewNote(
+		[]models.SecretOption{
+			models.WithPath("note1"),
+			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
+			models.WithCreatedBy("vitalii"),
+			models.WithModifiedBy("vitalii"),
+		},
+		[]models.NoteOption{
+			models.WithText(`
+				Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
+				ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco 
+				laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in 
+				voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat 
+				non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`),
+		},
+	)
 
 	vault := server.NewVault(ctx, pool, encryptionService)
 
@@ -60,6 +79,9 @@ func main() {
 	}
 	if err = vault.StoreSecret("vitalii", "jwt", card); err != nil {
 		log.Fatalf("Failed to process card: %s", err)
+	}
+	if err = vault.StoreSecret("vitalii", "jwt", note); err != nil {
+		log.Fatalf("Failed to process note: %s", err)
 	}
 
 	retrieveLogin := &models.Login{
@@ -82,6 +104,17 @@ func main() {
 		log.Fatalf("Failed to process card: %s", err)
 	}
 	logger.Log().Infof("[number=%s cvc=%s]", string(retrieveCard.Number), string(retrieveCard.CVC))
+
+	retrieveNote := models.NewNote(
+		[]models.SecretOption{
+			models.WithPath("note1"),
+		},
+		nil,
+	)
+	if err = vault.RetrieveSecret("vitalii", "jwt", retrieveNote); err != nil {
+		log.Fatalf("Failed to process card: %s", err)
+	}
+	logger.Log().Infof("[text=%s]", string(retrieveNote.Text))
 
 	names, _ := vault.ListSecrets("vitalii", "jwt", retrieveCard)
 	logger.Log().Infof("cards=%v", names)

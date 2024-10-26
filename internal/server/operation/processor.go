@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/operation/sql"
+	"gophkeeper.com/internal/server/operation/storage"
 	"gophkeeper.com/internal/server/service"
 )
 
@@ -52,22 +52,22 @@ func (b *ProcessorBuilder) WithDecryption(service service.EncryptionService) *Pr
 }
 
 func (b *ProcessorBuilder) WithStorageCreator(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, sql.NewStorageCreator(ctx, pool))
+	b.visitors = append(b.visitors, storage.NewCreator(ctx, pool))
 	return b
 }
 
 func (b *ProcessorBuilder) WithStorageDeleter(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, sql.NewStorageDeleter(ctx, pool))
+	b.visitors = append(b.visitors, storage.NewDeleter(ctx, pool))
 	return b
 }
 
 func (b *ProcessorBuilder) WithStorageLister(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, sql.NewStorageLister(ctx, pool))
+	b.visitors = append(b.visitors, storage.NewLister(ctx, pool))
 	return b
 }
 
 func (b *ProcessorBuilder) WithStorageRetriever(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, sql.NewStorageRetriever(ctx, pool))
+	b.visitors = append(b.visitors, storage.NewRetriever(ctx, pool))
 	return b
 }
 

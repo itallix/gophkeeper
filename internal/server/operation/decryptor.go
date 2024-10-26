@@ -52,7 +52,15 @@ func (enc *Decryptor) VisitCard(card *models.Card) error {
 	return nil
 }
 
-func (enc *Decryptor) VisitNote(_ *models.Note) error {
+func (enc *Decryptor) VisitNote(note *models.Note) error {
+	var buf buffer.Buffer
+	err := enc.encryptionService.DecryptStream(bytes.NewReader(note.Text), &buf, note.EncryptedDataKey)
+	if err != nil {
+		return fmt.Errorf("cannot decrypt note: %w", err)
+	}
+
+	note.Text = buf.Bytes()
+
 	return nil
 }
 

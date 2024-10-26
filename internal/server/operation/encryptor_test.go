@@ -158,3 +158,58 @@ func TestEncryptor_VisitCard(t *testing.T) {
 		})
 	}
 }
+
+func TestEncryptor_VisitNote(t *testing.T) {
+	tests := []struct {
+		name        string
+		note        *models.Note
+		setupMock   func(*mocks.EncryptionService)
+		expectError bool
+	}{
+		{
+			name: "successful encryption",
+			note: &models.Note{
+				Text: []byte("mysecrettext"),
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					EncryptStream(mock.Anything, mock.Anything).
+					Run(func(_ io.Reader, dst io.Writer) {
+						_, _ = dst.Write([]byte("encryptedtext"))
+					}).
+					Return([]byte("datakey"), []byte("encrypteddatakey"), nil)
+			},
+			expectError: false,
+		},
+		{
+			name: "encryption failure",
+			note: &models.Note{
+				Text: []byte("mysecrettext"),
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					EncryptStream(mock.Anything, mock.Anything).
+					Return(nil, nil, errors.New("encryption failed"))
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockEncryptionService := mocks.NewEncryptionService(t)
+			tt.setupMock(mockEncryptionService)
+
+			visitor := operation.NewEncryptor(mockEncryptionService)
+			err := visitor.VisitNote(tt.note)
+
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, []byte("encrypteddatakey"), tt.note.EncryptedDataKey)
+				assert.Equal(t, []byte("encryptedtext"), tt.note.Text)
+			}
+		})
+	}
+}

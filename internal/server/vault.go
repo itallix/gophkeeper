@@ -7,7 +7,7 @@ import (
 
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/operation"
-	"gophkeeper.com/internal/server/operation/sql"
+	"gophkeeper.com/internal/server/operation/storage"
 	"gophkeeper.com/internal/server/service"
 )
 
@@ -51,18 +51,16 @@ func (v *Vault) RetrieveSecret(user, token string, secret models.Secret) error {
 }
 
 func (v *Vault) DeleteSecret(user, token string, secret models.Secret) error {
-	op := operation.NewProcessorBuilder().
-		WithStorageDeleter(v.ctx, v.pool).
-		Build()
+	deleter := storage.NewDeleter(v.ctx, v.pool)
 
-	if err := op.Process(secret); err != nil {
+	if err := secret.Accept(deleter); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (v *Vault) ListSecrets(user, token string, secret models.Secret) ([]string, error) {
-	lister := sql.NewStorageLister(v.ctx, v.pool)
+	lister := storage.NewLister(v.ctx, v.pool)
 
 	if err := secret.Accept(lister); err != nil {
 		return nil, err

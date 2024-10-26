@@ -53,7 +53,16 @@ func (enc *Encryptor) VisitCard(card *models.Card) error {
 	return nil
 }
 
-func (enc *Encryptor) VisitNote(_ *models.Note) error {
+func (enc *Encryptor) VisitNote(note *models.Note) error {
+	var buf buffer.Buffer
+
+	_, encDataKey, err := enc.encryptionService.EncryptStream(bytes.NewReader(note.Text), &buf)
+	if err != nil {
+		return fmt.Errorf("cannot encrypt note text: %w", err)
+	}
+	note.EncryptedDataKey = encDataKey
+	note.Text = buf.Bytes()
+
 	return nil
 }
 
