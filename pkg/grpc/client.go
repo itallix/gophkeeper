@@ -1,4 +1,4 @@
-package client
+package grpc
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"gophkeeper.com/pkg/grpc/middleware"
 )
 
 type GophkeeperClient struct {
@@ -15,13 +16,14 @@ type GophkeeperClient struct {
 	pb.GophkeeperServiceClient
 }
 
-func (dc *GophkeeperClient) Close() {
-	dc.conn.Close()
+func (dc *GophkeeperClient) Close() error {
+	return dc.conn.Close()
 }
 
-func NewGophkeeperClient(targetURL string) (*GophkeeperClient, error) {
+func NewGophkeeperClient(targetURL string, token string) (*GophkeeperClient, error) {
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(middleware.AuthInterceptor(token)),
 	}
 	conn, err := grpc.NewClient(targetURL, opts...)
 	if err != nil {

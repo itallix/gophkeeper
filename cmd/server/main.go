@@ -10,12 +10,13 @@ import (
 	"google.golang.org/grpc"
 
 	"gophkeeper.com/internal/server"
-	v1 "gophkeeper.com/internal/server/api/v1"
+	"gophkeeper.com/internal/server/middleware"
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	pgrpc "gophkeeper.com/pkg/grpc"
 	"gophkeeper.com/pkg/logger"
 )
 
@@ -86,13 +87,13 @@ func main() {
 
 	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
 
-	if err = vault.StoreSecret("vitalii", "jwt", login); err != nil {
+	if err = vault.StoreSecret(login); err != nil {
 		log.Fatalf("Failed to process login: %s", err)
 	}
-	if err = vault.StoreSecret("vitalii", "jwt", card); err != nil {
+	if err = vault.StoreSecret(card); err != nil {
 		log.Fatalf("Failed to process card: %s", err)
 	}
-	if err = vault.StoreSecret("vitalii", "jwt", note); err != nil {
+	if err = vault.StoreSecret(note); err != nil {
 		log.Fatalf("Failed to process note: %s", err)
 	}
 
@@ -101,7 +102,7 @@ func main() {
 			Path: "login1",
 		},
 	}
-	if err = vault.RetrieveSecret("vitalii", "jwt", retrieveLogin); err != nil {
+	if err = vault.RetrieveSecret(retrieveLogin); err != nil {
 		log.Fatalf("Failed to process login: %s", err)
 	}
 	logger.Log().Infof("[login=%s password=%s]", retrieveLogin.Login, string(retrieveLogin.Password))
@@ -112,7 +113,7 @@ func main() {
 		},
 		nil,
 	)
-	if err = vault.RetrieveSecret("vitalii", "jwt", retrieveCard); err != nil {
+	if err = vault.RetrieveSecret(retrieveCard); err != nil {
 		log.Fatalf("Failed to process card: %s", err)
 	}
 	logger.Log().Infof("[number=%s cvc=%s]", string(retrieveCard.Number), string(retrieveCard.CVC))
@@ -123,23 +124,25 @@ func main() {
 		},
 		nil,
 	)
-	if err = vault.RetrieveSecret("vitalii", "jwt", retrieveNote); err != nil {
+	if err = vault.RetrieveSecret(retrieveNote); err != nil {
 		log.Fatalf("Failed to process card: %s", err)
 	}
 	logger.Log().Infof("[text=%s]", string(retrieveNote.Text))
 
-	names, _ := vault.ListSecrets("vitalii", "jwt", retrieveCard)
+	names, _ := vault.ListSecrets(retrieveCard)
 	logger.Log().Infof("cards=%v", names)
 
 	lis, err := net.Listen("tcp", "localhost:8081")
 	if err != nil {
 		log.Fatalf("failed to run gRPC server: %v", err)
 	}
-	grpcServer := grpc.NewServer()
 	userRepo := storage.NewUserRepo(pool)
-	pb.RegisterGophkeeperServiceServer(grpcServer, v1.NewGophkeeperServer(service.NewJWTAuthService(
-		userRepo, []byte("secret"), 1*time.Hour,
-	), userRepo))
+	authService := service.NewJWTAuthService(userRepo, []byte("secret"), 1*time.Hour)
+	authInterceptor := middleware.NewAuthInterceptor(authService)
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(authInterceptor.Unary()),
+	)
+	pb.RegisterGophkeeperServiceServer(grpcServer, pgrpc.NewGophkeeperServer(vault, authService, userRepo))
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("cannot serve gRPC server: %v", err)

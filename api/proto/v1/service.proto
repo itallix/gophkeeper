@@ -8,6 +8,10 @@ service GophkeeperService {
     rpc Register(RegisterRequest) returns (AuthResponse) {}
 
     // authenticated APIs
+    rpc ListLogins(ListLoginRequest) returns (ListLoginResponse) {}
+    rpc CreateLogin(CreateLoginRequest) returns (CreateLoginResponse) {}
+    rpc DeleteLogin(DeleteLoginRequest) returns (DeleteLoginResponse) {}
+    rpc GetLogin(GetLoginRequest) returns (GetLoginResponse) {}
 }
 
 message RegisterRequest {
@@ -23,4 +27,42 @@ message LoginRequest {
 message AuthResponse {
     string token = 1;
     string user_id = 2;
+}
+
+message ListLoginRequest {
+}
+
+message ListLoginResponse {
+    repeated string secrets = 1;
+}
+
+message CreateLoginRequest {
+    string path = 1;
+    string login = 2;
+    string password = 3;
+}
+
+message CreateLoginResponse {
+    string message = 1;
+}
+
+message DeleteLoginRequest {
+    string path = 1;
+}
+
+message DeleteLoginResponse {
+    string message = 1;
+}
+
+message GetLoginRequest {
+    string path = 1;
+}
+
+message GetLoginResponse {
+    string login = 1;
+    string password = 2;
+    string created_at = 3;
+    string created_by = 4;
+    string path = 5;
+    string metadata = 6;
 }

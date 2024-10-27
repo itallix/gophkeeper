@@ -19,8 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GophkeeperService_Login_FullMethodName    = "/api.v1.GophkeeperService/Login"
-	GophkeeperService_Register_FullMethodName = "/api.v1.GophkeeperService/Register"
+	GophkeeperService_Login_FullMethodName       = "/api.v1.GophkeeperService/Login"
+	GophkeeperService_Register_FullMethodName    = "/api.v1.GophkeeperService/Register"
+	GophkeeperService_ListLogins_FullMethodName  = "/api.v1.GophkeeperService/ListLogins"
+	GophkeeperService_CreateLogin_FullMethodName = "/api.v1.GophkeeperService/CreateLogin"
+	GophkeeperService_DeleteLogin_FullMethodName = "/api.v1.GophkeeperService/DeleteLogin"
+	GophkeeperService_GetLogin_FullMethodName    = "/api.v1.GophkeeperService/GetLogin"
 )
 
 // GophkeeperServiceClient is the client API for GophkeeperService service.
@@ -30,6 +34,11 @@ type GophkeeperServiceClient interface {
 	// unauthenticated APIs
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*AuthResponse, error)
+	// authenticated APIs
+	ListLogins(ctx context.Context, in *ListLoginRequest, opts ...grpc.CallOption) (*ListLoginResponse, error)
+	CreateLogin(ctx context.Context, in *CreateLoginRequest, opts ...grpc.CallOption) (*CreateLoginResponse, error)
+	DeleteLogin(ctx context.Context, in *DeleteLoginRequest, opts ...grpc.CallOption) (*DeleteLoginResponse, error)
+	GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error)
 }
 
 type gophkeeperServiceClient struct {
@@ -60,6 +69,46 @@ func (c *gophkeeperServiceClient) Register(ctx context.Context, in *RegisterRequ
 	return out, nil
 }
 
+func (c *gophkeeperServiceClient) ListLogins(ctx context.Context, in *ListLoginRequest, opts ...grpc.CallOption) (*ListLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLoginResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_ListLogins_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gophkeeperServiceClient) CreateLogin(ctx context.Context, in *CreateLoginRequest, opts ...grpc.CallOption) (*CreateLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateLoginResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_CreateLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gophkeeperServiceClient) DeleteLogin(ctx context.Context, in *DeleteLoginRequest, opts ...grpc.CallOption) (*DeleteLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteLoginResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_DeleteLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gophkeeperServiceClient) GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLoginResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_GetLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GophkeeperServiceServer is the server API for GophkeeperService service.
 // All implementations must embed UnimplementedGophkeeperServiceServer
 // for forward compatibility.
@@ -67,6 +116,11 @@ type GophkeeperServiceServer interface {
 	// unauthenticated APIs
 	Login(context.Context, *LoginRequest) (*AuthResponse, error)
 	Register(context.Context, *RegisterRequest) (*AuthResponse, error)
+	// authenticated APIs
+	ListLogins(context.Context, *ListLoginRequest) (*ListLoginResponse, error)
+	CreateLogin(context.Context, *CreateLoginRequest) (*CreateLoginResponse, error)
+	DeleteLogin(context.Context, *DeleteLoginRequest) (*DeleteLoginResponse, error)
+	GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error)
 	mustEmbedUnimplementedGophkeeperServiceServer()
 }
 
@@ -82,6 +136,18 @@ func (UnimplementedGophkeeperServiceServer) Login(context.Context, *LoginRequest
 }
 func (UnimplementedGophkeeperServiceServer) Register(context.Context, *RegisterRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedGophkeeperServiceServer) ListLogins(context.Context, *ListLoginRequest) (*ListLoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLogins not implemented")
+}
+func (UnimplementedGophkeeperServiceServer) CreateLogin(context.Context, *CreateLoginRequest) (*CreateLoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLogin not implemented")
+}
+func (UnimplementedGophkeeperServiceServer) DeleteLogin(context.Context, *DeleteLoginRequest) (*DeleteLoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteLogin not implemented")
+}
+func (UnimplementedGophkeeperServiceServer) GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLogin not implemented")
 }
 func (UnimplementedGophkeeperServiceServer) mustEmbedUnimplementedGophkeeperServiceServer() {}
 func (UnimplementedGophkeeperServiceServer) testEmbeddedByValue()                           {}
@@ -140,6 +206,78 @@ func _GophkeeperService_Register_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GophkeeperService_ListLogins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GophkeeperServiceServer).ListLogins(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GophkeeperService_ListLogins_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GophkeeperServiceServer).ListLogins(ctx, req.(*ListLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GophkeeperService_CreateLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GophkeeperServiceServer).CreateLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GophkeeperService_CreateLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GophkeeperServiceServer).CreateLogin(ctx, req.(*CreateLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GophkeeperService_DeleteLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GophkeeperServiceServer).DeleteLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GophkeeperService_DeleteLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GophkeeperServiceServer).DeleteLogin(ctx, req.(*DeleteLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GophkeeperService_GetLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GophkeeperServiceServer).GetLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GophkeeperService_GetLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GophkeeperServiceServer).GetLogin(ctx, req.(*GetLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GophkeeperService_ServiceDesc is the grpc.ServiceDesc for GophkeeperService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -154,6 +292,22 @@ var GophkeeperService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _GophkeeperService_Register_Handler,
+		},
+		{
+			MethodName: "ListLogins",
+			Handler:    _GophkeeperService_ListLogins_Handler,
+		},
+		{
+			MethodName: "CreateLogin",
+			Handler:    _GophkeeperService_CreateLogin_Handler,
+		},
+		{
+			MethodName: "DeleteLogin",
+			Handler:    _GophkeeperService_DeleteLogin_Handler,
+		},
+		{
+			MethodName: "GetLogin",
+			Handler:    _GophkeeperService_GetLogin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

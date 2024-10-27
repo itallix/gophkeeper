@@ -47,8 +47,8 @@ build-client:
 run-client:
 	./bin/client
 
-.PHONY: generate
-generate:
+.PHONY: proto
+proto:
 	protoc --go_out=pkg/generated --go_opt=paths=source_relative \
 		--go-grpc_out=pkg/generated --go-grpc_opt=paths=source_relative \
 		api/proto/v1/*.proto
