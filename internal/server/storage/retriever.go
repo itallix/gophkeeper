@@ -28,13 +28,19 @@ func (s *Retriever) VisitLogin(login *models.Login) error {
 
 	errPrefix := "[RETRIEVE LOGIN]"
 	selectSQL := `
-	SELECT encrypted_data_key, login, password FROM logins l 
+	SELECT encrypted_data_key, created_at, created_by, login, password FROM logins l 
 	INNER JOIN secrets s ON l.secret_id = s.secret_id
 	WHERE s.path = $1
 	`
 
 	err := s.pool.QueryRow(ctx, selectSQL, login.Path).
-		Scan(&login.EncryptedDataKey, &login.Login, &login.Password)
+		Scan(
+			&login.EncryptedDataKey, 
+			&login.CreatedAt,
+			&login.CreatedBy,
+			&login.Login, 
+			&login.Password,
+		)
 	if err != nil {
 		return fmt.Errorf("%s failed to query logins: %w", errPrefix, err)
 	}
@@ -48,7 +54,8 @@ func (s *Retriever) VisitCard(card *models.Card) error {
 
 	errPrefix := "[RETRIEVE CARD]"
 	selectSQL := `
-	SELECT encrypted_data_key, cardholder_name, number, expiry_month, expiry_year, cvc FROM cards c 
+	SELECT encrypted_data_key, created_at, created_by, cardholder_name, number, expiry_month, expiry_year, cvc 
+	FROM cards c 
 	INNER JOIN secrets s ON c.secret_id = s.secret_id
 	WHERE s.path = $1
 	`
@@ -56,6 +63,8 @@ func (s *Retriever) VisitCard(card *models.Card) error {
 	err := s.pool.QueryRow(ctx, selectSQL, card.Path).
 		Scan(
 			&card.EncryptedDataKey,
+			&card.CreatedAt,
+			&card.CreatedBy,
 			&card.CardholderName,
 			&card.Number,
 			&card.ExpiryMonth,
@@ -75,13 +84,13 @@ func (s *Retriever) VisitNote(note *models.Note) error {
 
 	errPrefix := "[RETRIEVE NOTE]"
 	selectSQL := `
-	SELECT encrypted_data_key, text FROM notes n 
+	SELECT encrypted_data_key, created_at, created_by, text FROM notes n 
 	INNER JOIN secrets s ON n.secret_id = s.secret_id
 	WHERE s.path = $1
 	`
 
 	err := s.pool.QueryRow(ctx, selectSQL, note.Path).
-		Scan(&note.EncryptedDataKey, &note.Text)
+		Scan(&note.EncryptedDataKey, &note.CreatedAt, &note.CreatedBy, &note.Text)
 	if err != nil {
 		return fmt.Errorf("%s failed to query notes: %w", errPrefix, err)
 	}

@@ -109,26 +109,32 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 	var secret models.Secret
 	data := req.GetData()
 	path := data.GetBase().GetPath()
+	opts := []models.SecretOption{
+		models.WithPath(path),
+		models.WithCreatedBy(username),
+		models.WithModifiedBy(username),
+	}
 
 	switch req.Data.GetType() {
 	case pb.DataType_DATA_TYPE_LOGIN:
 		secret = models.NewLogin(
-			[]models.SecretOption{
-				models.WithPath(path),
-				models.WithCreatedBy(username),
-				models.WithModifiedBy(username),
-			},
+			opts,
 			[]models.LoginOption{
 				models.WithLogin(data.GetLogin().Login),
 				models.WithPassword(data.GetLogin().Password),
 			},
 		)
 	case pb.DataType_DATA_TYPE_CARD:
-		secret = models.NewCard(nil, nil)
+		secret = models.NewCard(opts, nil)
 	case pb.DataType_DATA_TYPE_NOTE:
-		secret = models.NewNote(nil, nil)
+		secret = models.NewNote(
+			opts,
+			[]models.NoteOption{
+				models.WithText(data.GetNote().Text),
+			},
+		)
 	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(nil, nil)
+		secret = models.NewNote(opts, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.Data.GetType())
 	}
@@ -144,40 +150,23 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 
 func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	var secret models.Secret
+	opts := []models.SecretOption{
+		models.WithPath(req.GetPath()),
+	}
 
 	switch req.GetType() {
 	case pb.DataType_DATA_TYPE_LOGIN:
-		secret = models.NewLogin(
-			[]models.SecretOption{
-				models.WithPath(req.GetPath()),
-			},
-			nil,
-		)
+		secret = models.NewLogin(opts, nil)
 	case pb.DataType_DATA_TYPE_CARD:
-		secret = models.NewCard(
-			[]models.SecretOption{
-				models.WithPath(req.GetPath()),
-			},
-			nil,
-		)
+		secret = models.NewCard(opts, nil)
 	case pb.DataType_DATA_TYPE_NOTE:
-		secret = models.NewNote(
-			[]models.SecretOption{
-				models.WithPath(req.GetPath()),
-			},
-			nil,
-		)
+		secret = models.NewNote(opts, nil)
 	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(
-			[]models.SecretOption{
-				models.WithPath(req.GetPath()),
-			},
-			nil,
-		)
+		secret = models.NewNote(opts, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
-	
+
 	if err := srv.vault.DeleteSecret(secret); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
@@ -188,39 +177,73 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 }
 
 func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
-	username, ok := ctx.Value("username").(string)
+	_, ok := ctx.Value("username").(string)
 	if !ok {
 		return nil, status.Error(codes.Internal, "username not found in context")
 	}
 	var secret models.Secret
+	opts := []models.SecretOption{
+		models.WithPath(req.GetPath()),
+	}
 
-	secret = models.NewLogin(
-		[]models.SecretOption{
-			models.WithPath(req.GetPath()),
-			models.WithCreatedBy(username),
-			models.WithModifiedBy(username),
-		},
-		nil,
-	)
+	switch req.GetType() {
+	case pb.DataType_DATA_TYPE_LOGIN:
+		secret = models.NewLogin(opts, nil)
+	case pb.DataType_DATA_TYPE_CARD:
+		secret = models.NewCard(opts, nil)
+	case pb.DataType_DATA_TYPE_NOTE:
+		secret = models.NewNote(opts, nil)
+	case pb.DataType_DATA_TYPE_BINARY:
+		secret = models.NewNote(opts, nil)
+	default:
+		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
+	}
+
 	if err := srv.vault.RetrieveSecret(secret); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
 
-	login := secret.(*models.Login)
-	return &pb.GetResponse{
-		Data: &pb.TypedData{
-			Base: &pb.Metadata{
-				CreatedBy: login.CreatedBy,
-				CreatedAt: login.CreatedAt.Format("2006-01-02 15:04:05"),
-				Path:      login.Path,
-				Metadata:  fmt.Sprintf("%v", login.CustomMeta),
-			},
-			Data: &pb.TypedData_Login{
-				Login: &pb.LoginData{
-					Login:     login.Login,
-					Password:  string(login.Password),
+	switch req.GetType() {
+	case pb.DataType_DATA_TYPE_LOGIN:
+		login := secret.(*models.Login)
+		return &pb.GetResponse{
+			Data: &pb.TypedData{
+				Base: &pb.Metadata{
+					CreatedBy: login.CreatedBy,
+					CreatedAt: login.CreatedAt.Format("2006-01-02 15:04:05"),
+					Path:      login.Path,
+					Metadata:  fmt.Sprintf("%v", login.CustomMeta),
+				},
+				Data: &pb.TypedData_Login{
+					Login: &pb.LoginData{
+						Login:    login.Login,
+						Password: string(login.Password),
+					},
 				},
 			},
-		},
-	}, nil
+		}, nil
+	case pb.DataType_DATA_TYPE_CARD:
+		secret = models.NewCard(opts, nil)
+	case pb.DataType_DATA_TYPE_NOTE:
+		note := secret.(*models.Note)
+		return &pb.GetResponse{
+			Data: &pb.TypedData{
+				Base: &pb.Metadata{
+					CreatedBy: note.CreatedBy,
+					CreatedAt: note.CreatedAt.Format("2006-01-02 15:04:05"),
+					Path:      note.Path,
+					Metadata:  fmt.Sprintf("%v", note.CustomMeta),
+				},
+				Data: &pb.TypedData_Note{
+					Note: &pb.NoteData{
+						Text: string(note.Text),
+					},
+				},
+			},
+		}, nil
+	case pb.DataType_DATA_TYPE_BINARY:
+		secret = models.NewNote(opts, nil)
+	}
+
+	return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 }

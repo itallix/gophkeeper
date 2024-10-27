@@ -19,6 +19,7 @@ func Execute() error {
 	rootCmd.AddCommand(
 		cmd.NewUserCmd(),
 		cmd.NewLoginCmd(),
+		cmd.NewNoteCmd(),
 	)
 
 	return rootCmd.Execute()
