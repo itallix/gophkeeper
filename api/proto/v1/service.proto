@@ -8,10 +8,10 @@ service GophkeeperService {
     rpc Register(RegisterRequest) returns (AuthResponse) {}
 
     // authenticated APIs
-    rpc ListLogins(ListLoginRequest) returns (ListLoginResponse) {}
-    rpc CreateLogin(CreateLoginRequest) returns (CreateLoginResponse) {}
-    rpc DeleteLogin(DeleteLoginRequest) returns (DeleteLoginResponse) {}
-    rpc GetLogin(GetLoginRequest) returns (GetLoginResponse) {}
+    rpc Create(CreateRequest) returns (CreateResponse) {}
+    rpc Get(GetRequest) returns (GetResponse) {}
+    rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+    rpc List(ListRequest) returns (ListResponse) {}
 }
 
 message RegisterRequest {
@@ -29,40 +29,85 @@ message AuthResponse {
     string user_id = 2;
 }
 
-message ListLoginRequest {
+message CreateRequest {
+    TypedData data = 1;
 }
 
-message ListLoginResponse {
+message CreateResponse {
+    string message = 1;
+}
+
+message ListRequest {
+    DataType type = 1;
+}
+
+message ListResponse {
     repeated string secrets = 1;
 }
 
-message CreateLoginRequest {
-    string path = 1;
-    string login = 2;
-    string password = 3;
+message GetRequest {
+    DataType type = 1;
+    string path = 2;
 }
 
-message CreateLoginResponse {
+message GetResponse {
+    TypedData data = 1;
+}
+
+message DeleteRequest {
+    DataType type = 1;
+    string path = 2;
+}
+
+message DeleteResponse {
     string message = 1;
 }
 
-message DeleteLoginRequest {
-    string path = 1;
+enum DataType {
+    DATA_TYPE_UNSPECIFIED = 0;
+    DATA_TYPE_LOGIN = 1;
+    DATA_TYPE_CARD = 2;
+    DATA_TYPE_NOTE = 3;
+    DATA_TYPE_BINARY = 4;
 }
 
-message DeleteLoginResponse {
-    string message = 1;
+message TypedData {
+    DataType type = 1;
+    Metadata base = 2;
+    oneof data {
+        LoginData login = 3;
+        CardData card = 4;
+        NoteData note = 5;
+        BinaryData binary = 6;
+    }
 }
 
-message GetLoginRequest {
-    string path = 1;
+message Metadata {
+    string created_at = 1;
+    string created_by = 2;
+    string path = 3;
+    string metadata = 4;
 }
 
-message GetLoginResponse {
+message LoginData {
     string login = 1;
     string password = 2;
-    string created_at = 3;
-    string created_by = 4;
-    string path = 5;
-    string metadata = 6;
+}
+
+message CardData {
+    string card_holder = 1;
+    string number = 2;
+    int32 expiry_month = 3;
+    int32 expiry_year = 4;
+    string cvv = 5;
+}
+
+message NoteData {
+    string text = 1;
+}
+
+message BinaryData {
+    string path = 1;
+    bytes data = 2;
+    int32 chunk = 3;
 }

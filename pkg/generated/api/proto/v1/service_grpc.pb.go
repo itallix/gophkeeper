@@ -19,12 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GophkeeperService_Login_FullMethodName       = "/api.v1.GophkeeperService/Login"
-	GophkeeperService_Register_FullMethodName    = "/api.v1.GophkeeperService/Register"
-	GophkeeperService_ListLogins_FullMethodName  = "/api.v1.GophkeeperService/ListLogins"
-	GophkeeperService_CreateLogin_FullMethodName = "/api.v1.GophkeeperService/CreateLogin"
-	GophkeeperService_DeleteLogin_FullMethodName = "/api.v1.GophkeeperService/DeleteLogin"
-	GophkeeperService_GetLogin_FullMethodName    = "/api.v1.GophkeeperService/GetLogin"
+	GophkeeperService_Login_FullMethodName    = "/api.v1.GophkeeperService/Login"
+	GophkeeperService_Register_FullMethodName = "/api.v1.GophkeeperService/Register"
+	GophkeeperService_Create_FullMethodName   = "/api.v1.GophkeeperService/Create"
+	GophkeeperService_Get_FullMethodName      = "/api.v1.GophkeeperService/Get"
+	GophkeeperService_Delete_FullMethodName   = "/api.v1.GophkeeperService/Delete"
+	GophkeeperService_List_FullMethodName     = "/api.v1.GophkeeperService/List"
 )
 
 // GophkeeperServiceClient is the client API for GophkeeperService service.
@@ -35,10 +35,10 @@ type GophkeeperServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	// authenticated APIs
-	ListLogins(ctx context.Context, in *ListLoginRequest, opts ...grpc.CallOption) (*ListLoginResponse, error)
-	CreateLogin(ctx context.Context, in *CreateLoginRequest, opts ...grpc.CallOption) (*CreateLoginResponse, error)
-	DeleteLogin(ctx context.Context, in *DeleteLoginRequest, opts ...grpc.CallOption) (*DeleteLoginResponse, error)
-	GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error)
+	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
+	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
 
 type gophkeeperServiceClient struct {
@@ -69,40 +69,40 @@ func (c *gophkeeperServiceClient) Register(ctx context.Context, in *RegisterRequ
 	return out, nil
 }
 
-func (c *gophkeeperServiceClient) ListLogins(ctx context.Context, in *ListLoginRequest, opts ...grpc.CallOption) (*ListLoginResponse, error) {
+func (c *gophkeeperServiceClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListLoginResponse)
-	err := c.cc.Invoke(ctx, GophkeeperService_ListLogins_FullMethodName, in, out, cOpts...)
+	out := new(CreateResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_Create_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gophkeeperServiceClient) CreateLogin(ctx context.Context, in *CreateLoginRequest, opts ...grpc.CallOption) (*CreateLoginResponse, error) {
+func (c *gophkeeperServiceClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateLoginResponse)
-	err := c.cc.Invoke(ctx, GophkeeperService_CreateLogin_FullMethodName, in, out, cOpts...)
+	out := new(GetResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_Get_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gophkeeperServiceClient) DeleteLogin(ctx context.Context, in *DeleteLoginRequest, opts ...grpc.CallOption) (*DeleteLoginResponse, error) {
+func (c *gophkeeperServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteLoginResponse)
-	err := c.cc.Invoke(ctx, GophkeeperService_DeleteLogin_FullMethodName, in, out, cOpts...)
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_Delete_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gophkeeperServiceClient) GetLogin(ctx context.Context, in *GetLoginRequest, opts ...grpc.CallOption) (*GetLoginResponse, error) {
+func (c *gophkeeperServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetLoginResponse)
-	err := c.cc.Invoke(ctx, GophkeeperService_GetLogin_FullMethodName, in, out, cOpts...)
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, GophkeeperService_List_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -117,10 +117,10 @@ type GophkeeperServiceServer interface {
 	Login(context.Context, *LoginRequest) (*AuthResponse, error)
 	Register(context.Context, *RegisterRequest) (*AuthResponse, error)
 	// authenticated APIs
-	ListLogins(context.Context, *ListLoginRequest) (*ListLoginResponse, error)
-	CreateLogin(context.Context, *CreateLoginRequest) (*CreateLoginResponse, error)
-	DeleteLogin(context.Context, *DeleteLoginRequest) (*DeleteLoginResponse, error)
-	GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error)
+	Create(context.Context, *CreateRequest) (*CreateResponse, error)
+	Get(context.Context, *GetRequest) (*GetResponse, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	List(context.Context, *ListRequest) (*ListResponse, error)
 	mustEmbedUnimplementedGophkeeperServiceServer()
 }
 
@@ -137,17 +137,17 @@ func (UnimplementedGophkeeperServiceServer) Login(context.Context, *LoginRequest
 func (UnimplementedGophkeeperServiceServer) Register(context.Context, *RegisterRequest) (*AuthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
-func (UnimplementedGophkeeperServiceServer) ListLogins(context.Context, *ListLoginRequest) (*ListLoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListLogins not implemented")
+func (UnimplementedGophkeeperServiceServer) Create(context.Context, *CreateRequest) (*CreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedGophkeeperServiceServer) CreateLogin(context.Context, *CreateLoginRequest) (*CreateLoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateLogin not implemented")
+func (UnimplementedGophkeeperServiceServer) Get(context.Context, *GetRequest) (*GetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedGophkeeperServiceServer) DeleteLogin(context.Context, *DeleteLoginRequest) (*DeleteLoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteLogin not implemented")
+func (UnimplementedGophkeeperServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (UnimplementedGophkeeperServiceServer) GetLogin(context.Context, *GetLoginRequest) (*GetLoginResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLogin not implemented")
+func (UnimplementedGophkeeperServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedGophkeeperServiceServer) mustEmbedUnimplementedGophkeeperServiceServer() {}
 func (UnimplementedGophkeeperServiceServer) testEmbeddedByValue()                           {}
@@ -206,74 +206,74 @@ func _GophkeeperService_Register_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GophkeeperService_ListLogins_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListLoginRequest)
+func _GophkeeperService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GophkeeperServiceServer).ListLogins(ctx, in)
+		return srv.(GophkeeperServiceServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GophkeeperService_ListLogins_FullMethodName,
+		FullMethod: GophkeeperService_Create_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GophkeeperServiceServer).ListLogins(ctx, req.(*ListLoginRequest))
+		return srv.(GophkeeperServiceServer).Create(ctx, req.(*CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GophkeeperService_CreateLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateLoginRequest)
+func _GophkeeperService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GophkeeperServiceServer).CreateLogin(ctx, in)
+		return srv.(GophkeeperServiceServer).Get(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GophkeeperService_CreateLogin_FullMethodName,
+		FullMethod: GophkeeperService_Get_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GophkeeperServiceServer).CreateLogin(ctx, req.(*CreateLoginRequest))
+		return srv.(GophkeeperServiceServer).Get(ctx, req.(*GetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GophkeeperService_DeleteLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteLoginRequest)
+func _GophkeeperService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GophkeeperServiceServer).DeleteLogin(ctx, in)
+		return srv.(GophkeeperServiceServer).Delete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GophkeeperService_DeleteLogin_FullMethodName,
+		FullMethod: GophkeeperService_Delete_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GophkeeperServiceServer).DeleteLogin(ctx, req.(*DeleteLoginRequest))
+		return srv.(GophkeeperServiceServer).Delete(ctx, req.(*DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GophkeeperService_GetLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetLoginRequest)
+func _GophkeeperService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GophkeeperServiceServer).GetLogin(ctx, in)
+		return srv.(GophkeeperServiceServer).List(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GophkeeperService_GetLogin_FullMethodName,
+		FullMethod: GophkeeperService_List_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GophkeeperServiceServer).GetLogin(ctx, req.(*GetLoginRequest))
+		return srv.(GophkeeperServiceServer).List(ctx, req.(*ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -294,20 +294,20 @@ var GophkeeperService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _GophkeeperService_Register_Handler,
 		},
 		{
-			MethodName: "ListLogins",
-			Handler:    _GophkeeperService_ListLogins_Handler,
+			MethodName: "Create",
+			Handler:    _GophkeeperService_Create_Handler,
 		},
 		{
-			MethodName: "CreateLogin",
-			Handler:    _GophkeeperService_CreateLogin_Handler,
+			MethodName: "Get",
+			Handler:    _GophkeeperService_Get_Handler,
 		},
 		{
-			MethodName: "DeleteLogin",
-			Handler:    _GophkeeperService_DeleteLogin_Handler,
+			MethodName: "Delete",
+			Handler:    _GophkeeperService_Delete_Handler,
 		},
 		{
-			MethodName: "GetLogin",
-			Handler:    _GophkeeperService_GetLogin_Handler,
+			MethodName: "List",
+			Handler:    _GophkeeperService_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

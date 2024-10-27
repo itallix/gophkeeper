@@ -21,7 +21,9 @@ func NewLoginCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List available logins",
 		Run: func(cmd *cobra.Command, _ []string) {
-			resp, err := client.ListLogins(context.Background(), &pb.ListLoginRequest{})
+			resp, err := client.List(context.Background(), &pb.ListRequest{
+				Type: pb.DataType_DATA_TYPE_LOGIN,
+			})
 			if err != nil {
 				fmt.Printf("Error listing logins: %v\n", err)
 				os.Exit(1)
@@ -38,18 +40,19 @@ func NewLoginCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			path, _ := cmd.Flags().GetString("path")
 
-			resp, err := client.GetLogin(context.Background(), &pb.GetLoginRequest{
+			resp, err := client.Get(context.Background(), &pb.GetRequest{
+				Type: pb.DataType_DATA_TYPE_LOGIN,
 				Path: path,
 			})
 			if err != nil {
 				fmt.Printf("Failed to retrieve login data: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("Login: %s\n", resp.GetLogin())
-			fmt.Printf("Password: %s\n", resp.GetPassword())
-			fmt.Printf("Created at: %s\n", resp.GetCreatedAt())
-			fmt.Printf("Created by: %s\n", resp.GetCreatedBy())
-			fmt.Printf("Password: %s\n", resp.GetMetadata())
+			fmt.Printf("Login: %s\n", resp.GetData().GetLogin().Login)
+			fmt.Printf("Password: %s\n", resp.GetData().GetLogin().Password)
+			fmt.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
+			fmt.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
+			fmt.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
 		},
 	}
 	getCmd.Flags().StringP("path", "p", "", "Login path")
@@ -86,10 +89,19 @@ func NewLoginCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			resp, err := client.CreateLogin(context.Background(), &pb.CreateLoginRequest{
-				Path:     path,
-				Login:    login,
-				Password: string(password),
+			resp, err := client.Create(context.Background(), &pb.CreateRequest{
+				Data: &pb.TypedData{
+					Type: pb.DataType_DATA_TYPE_LOGIN,
+					Base: &pb.Metadata{
+						Path: path,
+					},
+					Data: &pb.TypedData_Login{
+						Login: &pb.LoginData{
+							Login:    login,
+							Password: string(password),
+						},
+					},
+				},
 			})
 			if err != nil {
 				fmt.Printf("Failed to create a new login entry: %v\n", err)
@@ -107,7 +119,8 @@ func NewLoginCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			path, _ := cmd.Flags().GetString("path")
 
-			resp, err := client.DeleteLogin(context.Background(), &pb.DeleteLoginRequest{
+			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
+				Type: pb.DataType_DATA_TYPE_LOGIN,
 				Path: path,
 			})
 			if err != nil {

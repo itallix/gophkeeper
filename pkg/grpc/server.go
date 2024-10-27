@@ -75,67 +75,126 @@ func (srv *GophkeeperServer) Register(ctx context.Context, req *pb.RegisterReque
 	}, nil
 }
 
-func (srv *GophkeeperServer) ListLogins(ctx context.Context, req *pb.ListLoginRequest) (*pb.ListLoginResponse, error) {
-	login := models.NewLogin(nil, nil)
-	list, err := srv.vault.ListSecrets(login)
+func (srv *GophkeeperServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	var secret models.Secret
+
+	switch req.GetType() {
+	case pb.DataType_DATA_TYPE_LOGIN:
+		secret = models.NewLogin(nil, nil)
+	case pb.DataType_DATA_TYPE_CARD:
+		secret = models.NewCard(nil, nil)
+	case pb.DataType_DATA_TYPE_NOTE:
+		secret = models.NewNote(nil, nil)
+	case pb.DataType_DATA_TYPE_BINARY:
+		secret = models.NewNote(nil, nil)
+	default:
+		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
+	}
+
+	list, err := srv.vault.ListSecrets(secret)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
 
-	return &pb.ListLoginResponse{
+	return &pb.ListResponse{
 		Secrets: list,
 	}, nil
 }
 
-func (srv *GophkeeperServer) CreateLogin(ctx context.Context, req *pb.CreateLoginRequest) (*pb.CreateLoginResponse, error) {
+func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
 	username, ok := ctx.Value("username").(string)
 	if !ok {
 		return nil, status.Error(codes.Internal, "username not found in context")
 	}
+	var secret models.Secret
+	data := req.GetData()
+	path := data.GetBase().GetPath()
 
-	login := models.NewLogin(
-		[]models.SecretOption{
-			models.WithPath(req.GetPath()),
-			models.WithCreatedBy(username),
-			models.WithModifiedBy(username),
-		},
-		[]models.LoginOption{
-			models.WithLogin(req.GetLogin()),
-			models.WithPassword(req.GetPassword()),
-		},
-	)
-	if err := srv.vault.StoreSecret(login); err != nil {
+	switch req.Data.GetType() {
+	case pb.DataType_DATA_TYPE_LOGIN:
+		secret = models.NewLogin(
+			[]models.SecretOption{
+				models.WithPath(path),
+				models.WithCreatedBy(username),
+				models.WithModifiedBy(username),
+			},
+			[]models.LoginOption{
+				models.WithLogin(data.GetLogin().Login),
+				models.WithPassword(data.GetLogin().Password),
+			},
+		)
+	case pb.DataType_DATA_TYPE_CARD:
+		secret = models.NewCard(nil, nil)
+	case pb.DataType_DATA_TYPE_NOTE:
+		secret = models.NewNote(nil, nil)
+	case pb.DataType_DATA_TYPE_BINARY:
+		secret = models.NewNote(nil, nil)
+	default:
+		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.Data.GetType())
+	}
+
+	if err := srv.vault.StoreSecret(secret); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
 
-	return &pb.CreateLoginResponse{
-		Message: fmt.Sprintf("login with path=%s has been successfully created", req.GetPath()),
+	return &pb.CreateResponse{
+		Message: fmt.Sprintf("login with path=%s has been successfully created", path),
 	}, nil
 }
 
-func (srv *GophkeeperServer) DeleteLogin(ctx context.Context, req *pb.DeleteLoginRequest) (*pb.DeleteLoginResponse, error) {
-	login := models.NewLogin(
-		[]models.SecretOption{
-			models.WithPath(req.GetPath()),
-		},
-		nil,
-	)
-	if err := srv.vault.DeleteSecret(login); err != nil {
+func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	var secret models.Secret
+
+	switch req.GetType() {
+	case pb.DataType_DATA_TYPE_LOGIN:
+		secret = models.NewLogin(
+			[]models.SecretOption{
+				models.WithPath(req.GetPath()),
+			},
+			nil,
+		)
+	case pb.DataType_DATA_TYPE_CARD:
+		secret = models.NewCard(
+			[]models.SecretOption{
+				models.WithPath(req.GetPath()),
+			},
+			nil,
+		)
+	case pb.DataType_DATA_TYPE_NOTE:
+		secret = models.NewNote(
+			[]models.SecretOption{
+				models.WithPath(req.GetPath()),
+			},
+			nil,
+		)
+	case pb.DataType_DATA_TYPE_BINARY:
+		secret = models.NewNote(
+			[]models.SecretOption{
+				models.WithPath(req.GetPath()),
+			},
+			nil,
+		)
+	default:
+		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
+	}
+	
+	if err := srv.vault.DeleteSecret(secret); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
 
-	return &pb.DeleteLoginResponse{
+	return &pb.DeleteResponse{
 		Message: fmt.Sprintf("login with path=%s has been successfully deleted", req.GetPath()),
 	}, nil
 }
 
-func (srv *GophkeeperServer) GetLogin(ctx context.Context, req *pb.GetLoginRequest) (*pb.GetLoginResponse, error) {
+func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	username, ok := ctx.Value("username").(string)
 	if !ok {
 		return nil, status.Error(codes.Internal, "username not found in context")
 	}
+	var secret models.Secret
 
-	login := models.NewLogin(
+	secret = models.NewLogin(
 		[]models.SecretOption{
 			models.WithPath(req.GetPath()),
 			models.WithCreatedBy(username),
@@ -143,16 +202,25 @@ func (srv *GophkeeperServer) GetLogin(ctx context.Context, req *pb.GetLoginReque
 		},
 		nil,
 	)
-	if err := srv.vault.RetrieveSecret(login); err != nil {
+	if err := srv.vault.RetrieveSecret(secret); err != nil {
 		return nil, status.Errorf(codes.Internal, "cannot perform the action %v", err)
 	}
 
-	return &pb.GetLoginResponse{
-		Login:     login.Login,
-		Password:  string(login.Password),
-		CreatedBy: login.CreatedBy,
-		CreatedAt: login.CreatedAt.Format("2006-01-02 15:04:05"),
-		Path:      login.Path,
-		Metadata:  fmt.Sprintf("%v", login.CustomMeta),
+	login := secret.(*models.Login)
+	return &pb.GetResponse{
+		Data: &pb.TypedData{
+			Base: &pb.Metadata{
+				CreatedBy: login.CreatedBy,
+				CreatedAt: login.CreatedAt.Format("2006-01-02 15:04:05"),
+				Path:      login.Path,
+				Metadata:  fmt.Sprintf("%v", login.CustomMeta),
+			},
+			Data: &pb.TypedData_Login{
+				Login: &pb.LoginData{
+					Login:     login.Login,
+					Password:  string(login.Password),
+				},
+			},
+		},
 	}, nil
 }
