@@ -117,15 +117,24 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 
 	switch req.Data.GetType() {
 	case pb.DataType_DATA_TYPE_LOGIN:
+		loginData := data.GetLogin()
 		secret = models.NewLogin(
 			opts,
 			[]models.LoginOption{
-				models.WithLogin(data.GetLogin().Login),
-				models.WithPassword(data.GetLogin().Password),
+				models.WithLogin(loginData.Login),
+				models.WithPassword(loginData.Password),
 			},
 		)
 	case pb.DataType_DATA_TYPE_CARD:
-		secret = models.NewCard(opts, nil)
+		cardData := data.GetCard()
+		secret = models.NewCard(
+			opts, 
+			[]models.CardOption{
+				models.WithCardHolder(cardData.CardHolder),
+				models.WithCardNumber(cardData.Number),
+				models.WithExpiry(int8(cardData.ExpiryMonth), int16(cardData.ExpiryYear)),
+				models.WithCVC(cardData.Cvv),
+			})
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(
 			opts,
@@ -133,8 +142,6 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 				models.WithText(data.GetNote().Text),
 			},
 		)
-	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(opts, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.Data.GetType())
 	}
@@ -193,8 +200,6 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 		secret = models.NewCard(opts, nil)
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(opts, nil)
-	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(opts, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -223,7 +228,26 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 			},
 		}, nil
 	case pb.DataType_DATA_TYPE_CARD:
-		secret = models.NewCard(opts, nil)
+		card := secret.(*models.Card)
+		return &pb.GetResponse{
+			Data: &pb.TypedData{
+				Base: &pb.Metadata{
+					CreatedBy: card.CreatedBy,
+					CreatedAt: card.CreatedAt.Format("2006-01-02 15:04:05"),
+					Path:      card.Path,
+					Metadata:  fmt.Sprintf("%v", card.CustomMeta),
+				},
+				Data: &pb.TypedData_Card{
+					Card: &pb.CardData{
+						Number: string(card.Number),
+						CardHolder: card.CardholderName,
+						ExpiryMonth: int32(card.ExpiryMonth),
+						ExpiryYear: int32(card.ExpiryYear),
+						Cvv: string(card.CVC),
+					},
+				},
+			},
+		}, nil
 	case pb.DataType_DATA_TYPE_NOTE:
 		note := secret.(*models.Note)
 		return &pb.GetResponse{
@@ -241,8 +265,6 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 				},
 			},
 		}, nil
-	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(opts, nil)
 	}
 
 	return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())

@@ -64,7 +64,6 @@ func NewLoginCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, _ []string) {
 			path, _ := cmd.Flags().GetString("path")
 
-			// Read password securely
 			login, err := promptString("Enter login: ")
 			if err != nil {
 				fmt.Printf("\nFailed to read login: %v\n", err)
