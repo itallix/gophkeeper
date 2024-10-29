@@ -2,7 +2,10 @@ package grpc
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
@@ -13,6 +16,7 @@ import (
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"gophkeeper.com/pkg/logger"
 )
 
 type GophkeeperServer struct {
@@ -268,4 +272,37 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 	}
 
 	return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
+}
+
+func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) error {
+	var lastChunk *pb.Chunk
+	for {
+		chunk, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if chunk.Data == nil {
+			lastChunk = chunk
+			break
+		}
+		currentHash := md5.Sum(chunk.Data)
+		if chunk.Hash != hex.EncodeToString(currentHash[:]) {
+			return status.Error(codes.Aborted, "aborted upload due to chunk hash mismatch")
+		}
+		logger.Log().Infof("Uploaded chunk %d", chunk.ChunkId)
+		if err != nil {
+			return status.Errorf(codes.Internal, "failed to receive chunk: %v", err)
+		}
+	}
+	if err := stream.SendAndClose(&pb.UploadResponse{
+		Message: fmt.Sprintf("Upload of %s with %d chunks has been completed", lastChunk.Filename, lastChunk.ChunkId),
+	}); err != nil {
+		return status.Errorf(codes.Internal, "failed to close stream: %v", err)
+	}
+	return nil
+}
+
+func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.GophkeeperService_DownloadServer) error {
+	logger.Log().Info("Download")
+	return nil
 }

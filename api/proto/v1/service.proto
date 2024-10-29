@@ -12,6 +12,9 @@ service GophkeeperService {
     rpc Get(GetRequest) returns (GetResponse) {}
     rpc Delete(DeleteRequest) returns (DeleteResponse) {}
     rpc List(ListRequest) returns (ListResponse) {}
+
+    rpc Upload(stream Chunk) returns (UploadResponse) {}
+    rpc Download(DownloadRequest) returns (stream Chunk) {}
 }
 
 message RegisterRequest {
@@ -78,7 +81,6 @@ message TypedData {
         LoginData login = 3;
         CardData card = 4;
         NoteData note = 5;
-        BinaryData binary = 6;
     }
 }
 
@@ -106,8 +108,17 @@ message NoteData {
     string text = 1;
 }
 
-message BinaryData {
-    string path = 1;
+message Chunk {
+    string filename = 1;
     bytes data = 2;
-    int32 chunk = 3;
+    int32 chunk_id = 3;
+    string hash = 4;
+}
+
+message UploadResponse {
+    string message = 1;
+}
+
+message DownloadRequest {
+    string filename = 1;
 }

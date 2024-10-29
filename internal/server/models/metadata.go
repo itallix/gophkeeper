@@ -68,8 +68,21 @@ func (note *Note) Accept(v SecretVisitor) error {
 }
 
 type Binary struct {
+	BinaryID int64
+	ChunkID  int64
+	Chunks   int16
+	Hash     string
+	Name     string
+	Data     []byte
+
+	SecretMetadata
 }
 
 func (binary *Binary) Accept(v SecretVisitor) error {
 	return v.VisitBinary(binary)
+}
+
+// IsLast indicates the final chunk which doesn't have any data, but contains full file hash.
+func (binary *Binary) IsLast() bool {
+	return binary.Data == nil && binary.ChunkID > 0
 }

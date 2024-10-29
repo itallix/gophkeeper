@@ -21,6 +21,7 @@ func Execute() error {
 		cmd.NewLoginCmd(),
 		cmd.NewCardCmd(),
 		cmd.NewNoteCmd(),
+		cmd.NewBinaryCmd(),
 	)
 
 	return rootCmd.Execute()
