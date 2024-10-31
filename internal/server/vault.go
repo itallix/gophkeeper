@@ -55,7 +55,7 @@ func (v *Vault) RetrieveSecret(secret models.Secret) error {
 }
 
 func (v *Vault) DeleteSecret(secret models.Secret) error {
-	deleter := storage.NewDeleter(v.ctx, v.pool)
+	deleter := storage.NewDeleter(v.ctx, v.pool, v.objectStorage)
 
 	if err := secret.Accept(deleter); err != nil {
 		return err

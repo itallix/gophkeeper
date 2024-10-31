@@ -61,3 +61,17 @@ func (s *ObjectStorage) GetObject(ctx context.Context, bucket, name string) (io.
 	}
 	return object, stat.Size, nil
 }
+
+func (s *ObjectStorage) DeleteChunks(ctx context.Context, bucket, name string) error {
+	objectsCh := s.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
+		Prefix:    name,
+		Recursive: true,
+	})
+
+	for obj := range objectsCh {
+		if err := s.client.RemoveObject(ctx, bucket, obj.Key, minio.RemoveObjectOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}

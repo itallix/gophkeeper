@@ -58,8 +58,9 @@ func (b *ProcessorBuilder) WithStorageCreator(ctx context.Context, pool *pgxpool
 	return b
 }
 
-func (b *ProcessorBuilder) WithStorageDeleter(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, storage.NewDeleter(ctx, pool))
+func (b *ProcessorBuilder) WithStorageDeleter(ctx context.Context, pool *pgxpool.Pool, 
+	objectStorage *s3.ObjectStorage) *ProcessorBuilder {
+	b.visitors = append(b.visitors, storage.NewDeleter(ctx, pool, objectStorage))
 	return b
 }
 

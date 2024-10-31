@@ -145,7 +145,27 @@ func NewBinaryCmd() *cobra.Command {
 	createCmd.Flags().StringP("file", "f", "", "Binary filepath")
 	_ = createCmd.MarkFlagRequired("file")
 
-	binaryCmd.AddCommand(listCmd, createCmd)
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete binary",
+		Run: func(cmd *cobra.Command, _ []string) {
+			path, _ := cmd.Flags().GetString("path")
+
+			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
+				Type: pb.DataType_DATA_TYPE_BINARY,
+				Path: path,
+			})
+			if err != nil {
+				fmt.Printf("Error deleting binary: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println(resp.GetMessage())
+		},
+	}
+	deleteCmd.Flags().StringP("path", "p", "", "Binary path")
+	_ = deleteCmd.MarkFlagRequired("path")
+
+	binaryCmd.AddCommand(listCmd, createCmd, deleteCmd)
 
 	return binaryCmd
 }
