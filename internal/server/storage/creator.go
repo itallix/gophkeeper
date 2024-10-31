@@ -11,7 +11,7 @@ import (
 
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/s3"
-	"gophkeeper.com/pkg/logger"
+	"gophkeeper.com/internal/common/logger"
 )
 
 type Creator struct {

@@ -9,14 +9,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
+	"gophkeeper.com/internal/common/logger"
 	"gophkeeper.com/internal/server"
-	"gophkeeper.com/internal/server/middleware"
+	pgrpc "gophkeeper.com/internal/server/grpc"
+	"gophkeeper.com/internal/server/grpc/middleware"
 	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
-	pgrpc "gophkeeper.com/pkg/grpc"
-	"gophkeeper.com/pkg/logger"
 )
 
 const ServerPort = "8081"

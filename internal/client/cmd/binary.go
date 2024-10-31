@@ -193,6 +193,7 @@ func NewBinaryCmd() *cobra.Command {
 						os.Exit(1)
 					}
 					i++
+					fmt.Print(".")
 				} else {
 					if chunk.Hash != fileHash.Complete() {
 						fmt.Println("aborted upload due to file hash mismatch")
@@ -202,6 +203,7 @@ func NewBinaryCmd() *cobra.Command {
 					break
 				}
 			}
+			fmt.Println()
 
 			fmt.Printf("Download binary %s with %d chunks completed.\n", output, i)
 		},

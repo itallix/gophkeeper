@@ -11,12 +11,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"gophkeeper.com/internal/common/logger"
 	"gophkeeper.com/internal/server"
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
-	"gophkeeper.com/pkg/logger"
 )
 
 type GophkeeperServer struct {

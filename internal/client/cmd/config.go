@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	pgrpc "gophkeeper.com/pkg/grpc"
+	"gophkeeper.com/internal/client/grpc"
 )
 
 type Config struct {
@@ -21,7 +21,7 @@ type Config struct {
 var (
 	cfgFile string
 	config  Config
-	client  *pgrpc.GophkeeperClient
+	client  *grpc.GophkeeperClient
 )
 
 func InitConfig() {
@@ -53,7 +53,7 @@ func InitConfig() {
 
 	var err error
 	token, _ := LoadToken()
-	client, err = pgrpc.NewGophkeeperClient(config.ServerURL, token)
+	client, err = grpc.NewGophkeeperClient(config.ServerURL, token)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC client: %v\n", err)
 	}
