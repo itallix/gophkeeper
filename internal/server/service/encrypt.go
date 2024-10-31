@@ -7,22 +7,22 @@ import (
 	"io"
 )
 
-// EncryptionService handles encryption and decryption of streams using data keys.
+// EncryptionService handles encryption and decryption using data keys.
 type EncryptionService interface {
-	EncryptStream(src io.Reader, dst io.Writer) ([]byte, []byte, error)
-	EncryptStreamWithKey(src io.Reader, dst io.Writer, encryptedDataKey []byte) error
-	DecryptStream(src io.Reader, dst io.Writer, encryptedDataKey []byte) error
+	Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error)
+	EncryptWithKey(src []byte, dst io.Writer, encryptedDataKey []byte) error
+	Decrypt(src []byte, dst io.Writer, encryptedDataKey []byte) error
 }
 
-type StreamEncryptionService struct {
+type StandardEncryptionService struct {
 	kms KMS
 }
 
-func NewStreamEncryptionService(kms KMS) *StreamEncryptionService {
-	return &StreamEncryptionService{kms: kms}
+func NewStandardEncryptionService(kms KMS) *StandardEncryptionService {
+	return &StandardEncryptionService{kms: kms}
 }
 
-func (s *StreamEncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([]byte, []byte, error) {
+func (s *StandardEncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error) {
 	// Generate a new data key for this encryption operation
 	dataKey, encryptedDataKey, err := s.kms.GenerateDataKey()
 	if err != nil {
@@ -34,19 +34,20 @@ func (s *StreamEncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([
 		return nil, nil, err
 	}
 
-	iv := make([]byte, aes.BlockSize)
-	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	if _, err = dst.Write(iv); err != nil {
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = rand.Read(nonce)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv)
-	writer := &cipher.StreamWriter{S: stream, W: dst}
+	ciphertext := gcm.Seal(nonce, nonce, src, nil)
 
-	_, err = io.Copy(writer, src)
+	_, err = dst.Write(ciphertext)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,25 +56,31 @@ func (s *StreamEncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([
 	return dataKey, encryptedDataKey, nil
 }
 
-func (s *StreamEncryptionService) EncryptStreamWithKey(src io.Reader, dst io.Writer, dataKey []byte) error {
+func (s *StandardEncryptionService) EncryptWithKey(src []byte, dst io.Writer, encryptedDataKey []byte) error {
+	dataKey, err := s.kms.DecryptDataKey(encryptedDataKey)
+	if err != nil {
+		return err
+	}
+
 	block, err := aes.NewCipher(dataKey)
 	if err != nil {
 		return err
 	}
 
-	iv := make([]byte, aes.BlockSize)
-	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
 		return err
 	}
 
-	if _, err = dst.Write(iv); err != nil {
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = rand.Read(nonce)
+	if err != nil {
 		return err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv)
-	writer := &cipher.StreamWriter{S: stream, W: dst}
+	ciphertext := gcm.Seal(nonce, nonce, src, nil)
 
-	_, err = io.Copy(writer, src)
+	_, err = dst.Write(ciphertext)
 	if err != nil {
 		return err
 	}
@@ -81,7 +88,7 @@ func (s *StreamEncryptionService) EncryptStreamWithKey(src io.Reader, dst io.Wri
 	return nil
 }
 
-func (s *StreamEncryptionService) DecryptStream(src io.Reader, dst io.Writer, encryptedDataKey []byte) error {
+func (s *StandardEncryptionService) Decrypt(src []byte, dst io.Writer, encryptedDataKey []byte) error {
 	// Decrypt the data key using the master key
 	dataKey, err := s.kms.DecryptDataKey(encryptedDataKey)
 	if err != nil {
@@ -93,14 +100,21 @@ func (s *StreamEncryptionService) DecryptStream(src io.Reader, dst io.Writer, en
 		return err
 	}
 
-	iv := make([]byte, aes.BlockSize)
-	if _, err = io.ReadFull(src, iv); err != nil {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
 		return err
 	}
 
-	stream := cipher.NewCFBDecrypter(block, iv)
-	reader := &cipher.StreamReader{S: stream, R: src}
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := src[:nonceSize], src[nonceSize:]
 
-	_, err = io.Copy(dst, reader)
-	return err
+	decrypted, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return err
+	}
+	_, err = dst.Write(decrypted)
+	if err != nil {
+		return err
+	}
+	return nil
 }

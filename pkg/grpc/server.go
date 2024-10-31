@@ -90,7 +90,7 @@ func (srv *GophkeeperServer) List(ctx context.Context, req *pb.ListRequest) (*pb
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(nil, nil)
 	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(nil, nil)
+		secret = models.NewBinary(nil, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -119,35 +119,35 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 		models.WithModifiedBy(username),
 	}
 
-	switch req.Data.GetType() {
+	switch req.GetData().GetType() {
 	case pb.DataType_DATA_TYPE_LOGIN:
 		loginData := data.GetLogin()
 		secret = models.NewLogin(
 			opts,
 			[]models.LoginOption{
-				models.WithLogin(loginData.Login),
-				models.WithPassword(loginData.Password),
+				models.WithLogin(loginData.GetLogin()),
+				models.WithPassword(loginData.GetPassword()),
 			},
 		)
 	case pb.DataType_DATA_TYPE_CARD:
 		cardData := data.GetCard()
 		secret = models.NewCard(
-			opts, 
+			opts,
 			[]models.CardOption{
-				models.WithCardHolder(cardData.CardHolder),
-				models.WithCardNumber(cardData.Number),
-				models.WithExpiry(int8(cardData.ExpiryMonth), int16(cardData.ExpiryYear)),
-				models.WithCVC(cardData.Cvv),
+				models.WithCardHolder(cardData.GetCardHolder()),
+				models.WithCardNumber(cardData.GetNumber()),
+				models.WithExpiry(int8(cardData.GetExpiryMonth()), int16(cardData.GetExpiryYear())),
+				models.WithCVC(cardData.GetCvv()),
 			})
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(
 			opts,
 			[]models.NoteOption{
-				models.WithText(data.GetNote().Text),
+				models.WithText(data.GetNote().GetText()),
 			},
 		)
 	default:
-		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.Data.GetType())
+		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetData().GetType())
 	}
 
 	if err := srv.vault.StoreSecret(secret); err != nil {
@@ -173,7 +173,7 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(opts, nil)
 	case pb.DataType_DATA_TYPE_BINARY:
-		secret = models.NewNote(opts, nil)
+		secret = models.NewBinary(opts, nil)
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -243,11 +243,11 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 				},
 				Data: &pb.TypedData_Card{
 					Card: &pb.CardData{
-						Number: string(card.Number),
-						CardHolder: card.CardholderName,
+						Number:      string(card.Number),
+						CardHolder:  card.CardholderName,
 						ExpiryMonth: int32(card.ExpiryMonth),
-						ExpiryYear: int32(card.ExpiryYear),
-						Cvv: string(card.CVC),
+						ExpiryYear:  int32(card.ExpiryYear),
+						Cvv:         string(card.CVC),
 					},
 				},
 			},
@@ -275,7 +275,15 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 }
 
 func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) error {
-	var lastChunk *pb.Chunk
+	username, ok := stream.Context().Value("username").(string)
+	if !ok {
+		return status.Error(codes.Internal, "username not found in context")
+	}
+
+	var (
+		lastChunk  *pb.Chunk
+		encDataKey []byte
+	)
 	for {
 		chunk, err := stream.Recv()
 		if err == io.EOF {
@@ -285,17 +293,45 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 			lastChunk = chunk
 			break
 		}
-		currentHash := md5.Sum(chunk.Data)
-		if chunk.Hash != hex.EncodeToString(currentHash[:]) {
+		currentHash := md5.Sum(chunk.GetData())
+		if chunk.GetHash() != hex.EncodeToString(currentHash[:]) {
 			return status.Error(codes.Aborted, "aborted upload due to chunk hash mismatch")
 		}
-		logger.Log().Infof("Uploaded chunk %d", chunk.ChunkId)
-		if err != nil {
-			return status.Errorf(codes.Internal, "failed to receive chunk: %v", err)
+
+		binary := models.NewBinary(
+			[]models.SecretOption{
+				models.WithPath(chunk.GetFilename()),
+				models.WithEncryptedDataKey(encDataKey),
+			},
+			[]models.BinaryOption{
+				models.WithChunkID(int64(chunk.GetChunkId())),
+				models.WithData(chunk.GetData()),
+			})
+		if err := srv.vault.StoreSecret(binary); err != nil {
+			return status.Errorf(codes.Internal, "failed to store chunk: %v", err)
+		}
+		if encDataKey == nil {
+			encDataKey = binary.EncryptedDataKey
 		}
 	}
+	binary := models.NewBinary(
+		[]models.SecretOption{
+			models.WithPath(lastChunk.GetFilename()),
+			models.WithCreatedBy(username),
+			models.WithModifiedBy(username),
+			models.WithEncryptedDataKey(encDataKey),
+		},
+		[]models.BinaryOption{
+			models.WithChunks(int16(lastChunk.GetChunkId())),
+			models.WithHash(lastChunk.GetHash()),
+			models.WithData(nil),
+		},
+	)
+	if err := srv.vault.StoreSecret(binary); err != nil {
+		return status.Errorf(codes.Internal, "failed to store chunk: %v", err)
+	}
 	if err := stream.SendAndClose(&pb.UploadResponse{
-		Message: fmt.Sprintf("Upload of %s with %d chunks has been completed", lastChunk.Filename, lastChunk.ChunkId),
+		Message: fmt.Sprintf("Upload of %s with %d chunks has been completed", lastChunk.GetFilename(), lastChunk.GetChunkId()),
 	}); err != nil {
 		return status.Errorf(codes.Internal, "failed to close stream: %v", err)
 	}

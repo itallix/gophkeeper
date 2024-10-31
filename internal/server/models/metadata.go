@@ -72,7 +72,6 @@ type Binary struct {
 	ChunkID  int64
 	Chunks   int16
 	Hash     string
-	Name     string
 	Data     []byte
 
 	SecretMetadata
@@ -84,5 +83,5 @@ func (binary *Binary) Accept(v SecretVisitor) error {
 
 // IsLast indicates the final chunk which doesn't have any data, but contains full file hash.
 func (binary *Binary) IsLast() bool {
-	return binary.Data == nil && binary.ChunkID > 0
+	return binary.Data == nil && binary.Chunks > 0
 }

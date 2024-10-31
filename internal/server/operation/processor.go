@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gophkeeper.com/internal/server/models"
+	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
 )
@@ -51,8 +52,9 @@ func (b *ProcessorBuilder) WithDecryption(service service.EncryptionService) *Pr
 	return b
 }
 
-func (b *ProcessorBuilder) WithStorageCreator(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, storage.NewCreator(ctx, pool))
+func (b *ProcessorBuilder) WithStorageCreator(ctx context.Context, pool *pgxpool.Pool,
+	objectStorage *s3.ObjectStorage) *ProcessorBuilder {
+	b.visitors = append(b.visitors, storage.NewCreator(ctx, pool, objectStorage))
 	return b
 }
 

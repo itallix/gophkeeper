@@ -54,10 +54,50 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
 
-		// Add claims to context
 		newCtx := context.WithValue(ctx, "username", username)
 
 		return handler(newCtx, req)
+	}
+}
+
+// serverStream wraps around the embedded grpc.ServerStream.
+type serverStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (w *serverStream) Context() context.Context {
+	return w.ctx
+}
+
+// Stream interceptor for JWT tokens.
+func (i *AuthInterceptor) Stream() grpc.StreamServerInterceptor {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		ctx := ss.Context()
+
+		// Extract token from metadata
+		token, err := i.extractToken(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Validate token
+		username, err := i.authService.ValidateToken(token)
+		if err != nil {
+			return status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+		}
+
+		newCtx := context.WithValue(ctx, "username", username)
+		wrapped := &serverStream{
+			ServerStream: ss, ctx: newCtx,
+		}
+
+		return handler(srv, wrapped)
 	}
 }
 

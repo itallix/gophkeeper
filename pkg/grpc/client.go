@@ -21,9 +21,11 @@ func (dc *GophkeeperClient) Close() error {
 }
 
 func NewGophkeeperClient(targetURL string, token string) (*GophkeeperClient, error) {
+	// TODO: implement tokenProvider with refresh tokens
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(middleware.AuthInterceptor(token)),
+		grpc.WithStreamInterceptor(middleware.StreamAuthInterceptor(token)),
 	}
 	conn, err := grpc.NewClient(targetURL, opts...)
 	if err != nil {

@@ -135,6 +135,42 @@ func WithText(text string) NoteOption {
 	}
 }
 
+// Binary-specific options.
+type BinaryOptions struct {
+	ChunkID int64
+	Chunks  int16
+	Hash    string
+	Data    []byte
+
+	SecretOptions
+}
+
+type BinaryOption func(*BinaryOptions)
+
+func WithChunkID(chunkID int64) BinaryOption {
+	return func(o *BinaryOptions) {
+		o.ChunkID = chunkID
+	}
+}
+
+func WithChunks(chunks int16) BinaryOption {
+	return func(o *BinaryOptions) {
+		o.Chunks = chunks
+	}
+}
+
+func WithHash(hash string) BinaryOption {
+	return func(o *BinaryOptions) {
+		o.Hash = hash
+	}
+}
+
+func WithData(data []byte) BinaryOption {
+	return func(o *BinaryOptions) {
+		o.Data = data
+	}
+}
+
 // Factory functions.
 func NewLogin(commonOpts []SecretOption, loginOpts []LoginOption) *Login {
 	// Initialize with defaults
@@ -239,5 +275,43 @@ func NewNote(commonOpts []SecretOption, noteOpts []NoteOption) *Note {
 			ModifiedBy:       options.ModifiedBy,
 		},
 		Text: []byte(options.Text),
+	}
+}
+
+func NewBinary(commonOpts []SecretOption, binaryOpts []BinaryOption) *Binary {
+	// Initialize with defaults
+	options := &BinaryOptions{
+		SecretOptions: SecretOptions{
+			CreatedAt:      time.Now(),
+			ModifiedAt:     time.Now(),
+			CustomMetadata: make(map[string]string),
+		},
+	}
+
+	// Apply common options
+	for _, opt := range commonOpts {
+		opt(&options.SecretOptions)
+	}
+
+	// Apply binary-specific options
+	for _, opt := range binaryOpts {
+		opt(options)
+	}
+
+	// Create note
+	return &Binary{
+		SecretMetadata: SecretMetadata{
+			Path:             options.Path,
+			CreatedAt:        options.CreatedAt,
+			ModifiedAt:       options.ModifiedAt,
+			EncryptedDataKey: options.EncryptedDataKey,
+			CustomMeta:       options.CustomMetadata,
+			CreatedBy:        options.CreatedBy,
+			ModifiedBy:       options.ModifiedBy,
+		},
+		ChunkID: options.ChunkID,
+		Chunks:  options.Chunks,
+		Hash:    options.Hash,
+		Data:    options.Data,
 	}
 }

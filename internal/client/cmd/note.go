@@ -47,7 +47,7 @@ func NewNoteCmd() *cobra.Command {
 				fmt.Printf("Failed to retrieve note data: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("Note: %s\n", resp.GetData().GetNote().Text)
+			fmt.Printf("Note: %s\n", resp.GetData().GetNote().GetText())
 			fmt.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
 			fmt.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
 			fmt.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
@@ -67,7 +67,7 @@ func NewNoteCmd() *cobra.Command {
 			if err != nil {
 				fmt.Printf("\nFailed to read note text: %v\n", err)
 				os.Exit(1)
-			}			
+			}
 			fmt.Println()
 
 			resp, err := client.Create(context.Background(), &pb.CreateRequest{
@@ -78,7 +78,7 @@ func NewNoteCmd() *cobra.Command {
 					},
 					Data: &pb.TypedData_Note{
 						Note: &pb.NoteData{
-							Text:    text,
+							Text: text,
 						},
 					},
 				},

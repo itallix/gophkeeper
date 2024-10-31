@@ -20,6 +20,53 @@ func (_m *SecretVisitor) EXPECT() *SecretVisitor_Expecter {
 	return &SecretVisitor_Expecter{mock: &_m.Mock}
 }
 
+// GetResult provides a mock function with given fields:
+func (_m *SecretVisitor) GetResult() any {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetResult")
+	}
+
+	var r0 any
+	if rf, ok := ret.Get(0).(func() any); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(any)
+		}
+	}
+
+	return r0
+}
+
+// SecretVisitor_GetResult_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetResult'
+type SecretVisitor_GetResult_Call struct {
+	*mock.Call
+}
+
+// GetResult is a helper method to define mock.On call
+func (_e *SecretVisitor_Expecter) GetResult() *SecretVisitor_GetResult_Call {
+	return &SecretVisitor_GetResult_Call{Call: _e.mock.On("GetResult")}
+}
+
+func (_c *SecretVisitor_GetResult_Call) Run(run func()) *SecretVisitor_GetResult_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *SecretVisitor_GetResult_Call) Return(_a0 any) *SecretVisitor_GetResult_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *SecretVisitor_GetResult_Call) RunAndReturn(run func() any) *SecretVisitor_GetResult_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // VisitBinary provides a mock function with given fields: binary
 func (_m *SecretVisitor) VisitBinary(binary *models.Binary) error {
 	ret := _m.Called(binary)

@@ -11,7 +11,6 @@ import (
 
 	"gophkeeper.com/internal/server"
 	"gophkeeper.com/internal/server/middleware"
-	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/internal/server/service"
 	"gophkeeper.com/internal/server/storage"
@@ -19,6 +18,8 @@ import (
 	pgrpc "gophkeeper.com/pkg/grpc"
 	"gophkeeper.com/pkg/logger"
 )
+
+const ServerPort = "8081"
 
 func main() {
 	if err := logger.Initialize("debug"); err != nil {
@@ -41,98 +42,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize kms: %s", err)
 	}
-	encryptionService := service.NewStreamEncryptionService(kms)
-	login := models.NewLogin(
-		[]models.SecretOption{
-			models.WithPath("login1"),
-			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
-			models.WithCreatedBy("vitalii"),
-			models.WithModifiedBy("vitalii"),
-		},
-		[]models.LoginOption{
-			models.WithLogin("vitalii"),
-			models.WithPassword("geheim"),
-		},
-	)
-	card := models.NewCard(
-		[]models.SecretOption{
-			models.WithPath("card1"),
-			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
-			models.WithCreatedBy("vitalii"),
-			models.WithModifiedBy("vitalii"),
-		},
-		[]models.CardOption{
-			models.WithCardHolder("Vitalii Karniushin"),
-			models.WithCardNumber("2345548223450943"),
-			models.WithExpiry(8, 2027),
-			models.WithCVC("345"),
-		},
-	)
-	note := models.NewNote(
-		[]models.SecretOption{
-			models.WithPath("note1"),
-			models.WithCustomMetadata(map[string]string{"attr1": "foo", "attr2": "boo"}),
-			models.WithCreatedBy("vitalii"),
-			models.WithModifiedBy("vitalii"),
-		},
-		[]models.NoteOption{
-			models.WithText(`
-				Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
-				ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco 
-				laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in 
-				voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat 
-				non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`),
-		},
-	)
-
+	encryptionService := service.NewStandardEncryptionService(kms)
 	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
-
-	if err = vault.StoreSecret(login); err != nil {
-		log.Fatalf("Failed to process login: %s", err)
-	}
-	if err = vault.StoreSecret(card); err != nil {
-		log.Fatalf("Failed to process card: %s", err)
-	}
-	if err = vault.StoreSecret(note); err != nil {
-		log.Fatalf("Failed to process note: %s", err)
-	}
-
-	retrieveLogin := &models.Login{
-		SecretMetadata: models.SecretMetadata{
-			Path: "login1",
-		},
-	}
-	if err = vault.RetrieveSecret(retrieveLogin); err != nil {
-		log.Fatalf("Failed to process login: %s", err)
-	}
-	logger.Log().Infof("[login=%s password=%s]", retrieveLogin.Login, string(retrieveLogin.Password))
-
-	retrieveCard := models.NewCard(
-		[]models.SecretOption{
-			models.WithPath("card1"),
-		},
-		nil,
-	)
-	if err = vault.RetrieveSecret(retrieveCard); err != nil {
-		log.Fatalf("Failed to process card: %s", err)
-	}
-	logger.Log().Infof("[number=%s cvc=%s]", string(retrieveCard.Number), string(retrieveCard.CVC))
-
-	retrieveNote := models.NewNote(
-		[]models.SecretOption{
-			models.WithPath("note1"),
-		},
-		nil,
-	)
-	if err = vault.RetrieveSecret(retrieveNote); err != nil {
-		log.Fatalf("Failed to process card: %s", err)
-	}
-	logger.Log().Infof("[text=%s]", string(retrieveNote.Text))
-
-	names, _ := vault.ListSecrets(retrieveCard)
-	logger.Log().Infof("cards=%v", names)
-
-	lis, err := net.Listen("tcp", "localhost:8081")
+	lis, err := net.Listen("tcp", "localhost:"+ServerPort)
 	if err != nil {
 		log.Fatalf("failed to run gRPC server: %v", err)
 	}
@@ -141,10 +53,12 @@ func main() {
 	authInterceptor := middleware.NewAuthInterceptor(authService)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(authInterceptor.Unary()),
+		grpc.StreamInterceptor(authInterceptor.Stream()),
 	)
 	pb.RegisterGophkeeperServiceServer(grpcServer, pgrpc.NewGophkeeperServer(vault, authService, userRepo))
 
-	if err := grpcServer.Serve(lis); err != nil {
+	logger.Log().Infof("Starting gRPC server on port %s...", ServerPort)
+	if err = grpcServer.Serve(lis); err != nil {
 		log.Fatalf("cannot serve gRPC server: %v", err)
 	}
 }

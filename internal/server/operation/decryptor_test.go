@@ -32,8 +32,8 @@ func TestDecryptor_VisitLogin(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("decryptedpassword"))
 					}).
 					Return(nil).
@@ -52,7 +52,7 @@ func TestDecryptor_VisitLogin(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
 					Return(errors.New("decryption failed")).
 					Once()
 			},
@@ -102,16 +102,16 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			setupMock: func(m *mocks.EncryptionService) {
 				// First call for number decryption
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("decryptednumber"))
 					}).
 					Return(nil).Once()
 
 				// Second call for CVC decryption
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("decryptedcvc"))
 					}).
 					Return(nil).Once()
@@ -131,7 +131,7 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
 					Return(errors.New("number decryption failed")).
 					Once()
 			},
@@ -149,15 +149,15 @@ func TestDecryptor_VisitCard(t *testing.T) {
 			setupMock: func(m *mocks.EncryptionService) {
 				// Successful number decryption
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("decryptednumber"))
 					}).
 					Return(nil).Once()
 
 				// Failed CVC decryption
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
 					Return(errors.New("cvc decryption failed")).
 					Once()
 			},
@@ -204,8 +204,8 @@ func TestDecryptor_VisitNote(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("decryptedtext"))
 					}).
 					Return(nil).
@@ -224,7 +224,7 @@ func TestDecryptor_VisitNote(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					DecryptStream(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
 					Return(errors.New("decryption failed")).
 					Once()
 			},

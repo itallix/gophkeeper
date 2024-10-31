@@ -48,8 +48,8 @@ func NewLoginCmd() *cobra.Command {
 				fmt.Printf("Failed to retrieve login data: %v\n", err)
 				os.Exit(1)
 			}
-			fmt.Printf("Login: %s\n", resp.GetData().GetLogin().Login)
-			fmt.Printf("Password: %s\n", resp.GetData().GetLogin().Password)
+			fmt.Printf("Login: %s\n", resp.GetData().GetLogin().GetLogin())
+			fmt.Printf("Password: %s\n", resp.GetData().GetLogin().GetPassword())
 			fmt.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
 			fmt.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
 			fmt.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())

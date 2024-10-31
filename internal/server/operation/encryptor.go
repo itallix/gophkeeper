@@ -1,7 +1,6 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 
 	"go.uber.org/zap/buffer"
@@ -22,7 +21,7 @@ func NewEncryptor(service service.EncryptionService) *Encryptor {
 
 func (enc *Encryptor) VisitLogin(login *models.Login) error {
 	var buf buffer.Buffer
-	_, encDataKey, err := enc.encryptionService.EncryptStream(bytes.NewReader(login.Password), &buf)
+	_, encDataKey, err := enc.encryptionService.Encrypt(login.Password, &buf)
 	if err != nil {
 		return fmt.Errorf("cannot encrypt password: %w", err)
 	}
@@ -36,7 +35,7 @@ func (enc *Encryptor) VisitLogin(login *models.Login) error {
 func (enc *Encryptor) VisitCard(card *models.Card) error {
 	var buf buffer.Buffer
 
-	dataKey, encDataKey, err := enc.encryptionService.EncryptStream(bytes.NewReader(card.Number), &buf)
+	dataKey, encDataKey, err := enc.encryptionService.Encrypt(card.Number, &buf)
 	if err != nil {
 		return fmt.Errorf("cannot encrypt card number: %w", err)
 	}
@@ -44,7 +43,7 @@ func (enc *Encryptor) VisitCard(card *models.Card) error {
 	card.Number = append([]byte(nil), buf.Bytes()...)
 	buf.Reset()
 
-	err = enc.encryptionService.EncryptStreamWithKey(bytes.NewReader(card.CVC), &buf, dataKey)
+	err = enc.encryptionService.EncryptWithKey(card.CVC, &buf, dataKey)
 	if err != nil {
 		return fmt.Errorf("cannot encrypt cvc code: %w", err)
 	}
@@ -56,7 +55,7 @@ func (enc *Encryptor) VisitCard(card *models.Card) error {
 func (enc *Encryptor) VisitNote(note *models.Note) error {
 	var buf buffer.Buffer
 
-	_, encDataKey, err := enc.encryptionService.EncryptStream(bytes.NewReader(note.Text), &buf)
+	_, encDataKey, err := enc.encryptionService.Encrypt(note.Text, &buf)
 	if err != nil {
 		return fmt.Errorf("cannot encrypt note text: %w", err)
 	}
@@ -66,7 +65,26 @@ func (enc *Encryptor) VisitNote(note *models.Note) error {
 	return nil
 }
 
-func (enc *Encryptor) VisitBinary(_ *models.Binary) error {
+func (enc *Encryptor) VisitBinary(binary *models.Binary) error {
+	if binary.IsLast() {
+		return nil
+	}
+
+	var buf buffer.Buffer
+	if binary.EncryptedDataKey != nil {
+		err := enc.encryptionService.EncryptWithKey(binary.Data, &buf, binary.EncryptedDataKey)
+		if err != nil {
+			return fmt.Errorf("cannot encrypt binary data: %w", err)
+		}
+	} else {
+		_, encDataKey, err := enc.encryptionService.Encrypt(binary.Data, &buf)
+		if err != nil {
+			return fmt.Errorf("cannot encrypt binary data: %w", err)
+		}
+		binary.EncryptedDataKey = encDataKey
+	}
+	binary.Data = buf.Bytes()
+
 	return nil
 }
 

@@ -16,7 +16,7 @@ import (
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
-const chunkSize = 1024 * 1024 // 1MB
+const chunkSize = 512 * 1024 // 0.5MB
 
 type FileHash struct {
 	mu     sync.Mutex
@@ -53,6 +53,23 @@ func NewBinaryCmd() *cobra.Command {
 	binaryCmd := &cobra.Command{
 		Use:   "binary",
 		Short: "Binary management commands",
+	}
+
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List binaries",
+		Run: func(cmd *cobra.Command, _ []string) {
+			resp, err := client.List(context.Background(), &pb.ListRequest{
+				Type: pb.DataType_DATA_TYPE_BINARY,
+			})
+			if err != nil {
+				fmt.Printf("Error listing binaries: %v\n", err)
+				os.Exit(1)
+			}
+			for _, name := range resp.GetSecrets() {
+				fmt.Println(name)
+			}
+		},
 	}
 
 	createCmd := &cobra.Command{
@@ -97,14 +114,16 @@ func NewBinaryCmd() *cobra.Command {
 					ChunkId:  chunkID,
 				}
 
-				if err := stream.Send(chunk); err != nil {
+				if err = stream.Send(chunk); err != nil {
 					fmt.Printf("failed to send chunk: %v", err)
 					os.Exit(1)
 				}
+				fmt.Print(".")
 				chunkID++
 			}
+			fmt.Println()
 
-			if err := stream.Send(&pb.Chunk{
+			if err = stream.Send(&pb.Chunk{
 				Data:     nil,
 				Filename: filepath.Base(fpath),
 				Hash:     fileHash.Complete(),
@@ -126,7 +145,7 @@ func NewBinaryCmd() *cobra.Command {
 	createCmd.Flags().StringP("file", "f", "", "Binary filepath")
 	_ = createCmd.MarkFlagRequired("file")
 
-	binaryCmd.AddCommand(createCmd)
+	binaryCmd.AddCommand(listCmd, createCmd)
 
 	return binaryCmd
 }

@@ -28,8 +28,8 @@ func TestEncryptor_VisitLogin(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
-					Run(func(_ io.Reader, dst io.Writer) {
+					Encrypt(mock.Anything, mock.Anything).
+					Run(func(_ []byte, dst io.Writer) {
 						_, _ = dst.Write([]byte("encryptedpassword"))
 					}).
 					Return([]byte("datakey"), []byte("encrypteddatakey"), nil)
@@ -43,7 +43,7 @@ func TestEncryptor_VisitLogin(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
+					Encrypt(mock.Anything, mock.Anything).
 					Return(nil, nil, errors.New("encryption failed"))
 			},
 			expectError: true,
@@ -86,16 +86,16 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
-					Run(func(_ io.Reader, dst io.Writer) {
+					Encrypt(mock.Anything, mock.Anything).
+					Run(func(_ []byte, dst io.Writer) {
 						_, _ = dst.Write([]byte("encryptednumber"))
 					}).
 					Return([]byte("datakey"), []byte("encrypteddatakey"), nil).
 					Once()
 
 				m.EXPECT().
-					EncryptStreamWithKey(mock.Anything, mock.Anything, []byte("datakey")).
-					Run(func(_ io.Reader, dst io.Writer, _ []byte) {
+					EncryptWithKey(mock.Anything, mock.Anything, []byte("datakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
 						_, _ = dst.Write([]byte("encryptedcvc"))
 					}).
 					Return(nil).
@@ -113,7 +113,7 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
+					Encrypt(mock.Anything, mock.Anything).
 					Return(nil, nil, errors.New("number encryption failed"))
 			},
 			expectError: true,
@@ -126,11 +126,11 @@ func TestEncryptor_VisitCard(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
+					Encrypt(mock.Anything, mock.Anything).
 					Return([]byte("datakey"), []byte("encrypteddatakey"), nil)
 
 				m.EXPECT().
-					EncryptStreamWithKey(mock.Anything, mock.Anything, []byte("datakey")).
+					EncryptWithKey(mock.Anything, mock.Anything, []byte("datakey")).
 					Return(errors.New("cvc encryption failed"))
 			},
 			expectError: true,
@@ -173,8 +173,8 @@ func TestEncryptor_VisitNote(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
-					Run(func(_ io.Reader, dst io.Writer) {
+					Encrypt(mock.Anything, mock.Anything).
+					Run(func(_ []byte, dst io.Writer) {
 						_, _ = dst.Write([]byte("encryptedtext"))
 					}).
 					Return([]byte("datakey"), []byte("encrypteddatakey"), nil)
@@ -188,7 +188,7 @@ func TestEncryptor_VisitNote(t *testing.T) {
 			},
 			setupMock: func(m *mocks.EncryptionService) {
 				m.EXPECT().
-					EncryptStream(mock.Anything, mock.Anything).
+					Encrypt(mock.Anything, mock.Anything).
 					Return(nil, nil, errors.New("encryption failed"))
 			},
 			expectError: true,

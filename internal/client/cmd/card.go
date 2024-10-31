@@ -50,10 +50,10 @@ func NewCardCmd() *cobra.Command {
 			}
 			baseData := resp.GetData().GetBase()
 			cardData := resp.GetData().GetCard()
-			fmt.Printf("Card holder: %s\n", cardData.CardHolder)
-			fmt.Printf("Card number: %s\n", cardData.Number)
-			fmt.Printf("Expiry month/year: %d/%d\n", cardData.ExpiryMonth, cardData.ExpiryYear)
-			fmt.Printf("CVC: %s\n", cardData.Cvv)
+			fmt.Printf("Card holder: %s\n", cardData.GetCardHolder())
+			fmt.Printf("Card number: %s\n", cardData.GetNumber())
+			fmt.Printf("Expiry month/year: %d/%d\n", cardData.GetExpiryMonth(), cardData.GetExpiryYear())
+			fmt.Printf("CVC: %s\n", cardData.GetCvv())
 			fmt.Printf("Created at: %s\n", baseData.GetCreatedAt())
 			fmt.Printf("Created by: %s\n", baseData.GetCreatedBy())
 			fmt.Printf("Metadata: %s\n", baseData.GetMetadata())
@@ -104,11 +104,11 @@ func NewCardCmd() *cobra.Command {
 					},
 					Data: &pb.TypedData_Card{
 						Card: &pb.CardData{
-							CardHolder:    holderName,
-							Number: number,
+							CardHolder:  holderName,
+							Number:      number,
 							ExpiryMonth: int32(expiryMonth),
-							ExpiryYear: int32(expiryYear),
-							Cvv: string(cvc),
+							ExpiryYear:  int32(expiryYear),
+							Cvv:         string(cvc),
 						},
 					},
 				},

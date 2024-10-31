@@ -33,7 +33,7 @@ func (v *Vault) StoreSecret(secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
 		WithValidation().
 		WithEncryption(v.encryptionService).
-		WithStorageCreator(v.ctx, v.pool).
+		WithStorageCreator(v.ctx, v.pool, v.objectStorage).
 		Build()
 
 	if err := op.Process(secret); err != nil {

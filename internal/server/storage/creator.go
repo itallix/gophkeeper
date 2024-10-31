@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -9,18 +10,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"gophkeeper.com/internal/server/models"
+	"gophkeeper.com/internal/server/s3"
 	"gophkeeper.com/pkg/logger"
 )
 
 type Creator struct {
-	pool    *pgxpool.Pool
-	context context.Context
+	pool          *pgxpool.Pool
+	objectStorage *s3.ObjectStorage
+	context       context.Context
 }
 
-func NewCreator(ctx context.Context, pool *pgxpool.Pool) *Creator {
+func NewCreator(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectStorage) *Creator {
 	return &Creator{
-		context: ctx,
-		pool:    pool,
+		context:       ctx,
+		pool:          pool,
+		objectStorage: objectStorage,
 	}
 }
 
@@ -197,7 +201,59 @@ func (s *Creator) VisitNote(note *models.Note) error {
 	return nil
 }
 
-func (s *Creator) VisitBinary(_ *models.Binary) error {
+func (s *Creator) VisitBinary(binary *models.Binary) error {
+	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
+	defer cancel()
+
+	if !binary.IsLast() {
+		// write the chunk data to object storage
+		chunkName := fmt.Sprintf("%s/%d", binary.Path, binary.ChunkID)
+		_, err := s.objectStorage.Upload(ctx, BucketBinaries, chunkName, int64(len(binary.Data)),
+			bytes.NewReader(binary.Data))
+		if err != nil {
+			return err
+		}
+		logger.Log().Infof("Binary chunk with name=[%s] has been successfully stored.", chunkName)
+	} else {
+		// record metadata in the database for the last element
+		errPrefix := "[CREATE BINARY]"
+		tx, err := s.pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("%s failed to begin transaction: %w", errPrefix, err)
+		}
+		defer func() {
+			_ = tx.Rollback(ctx)
+		}()
+
+		secretID, err := createSecret(ctx, tx, binary.SecretMetadata)
+		if err != nil {
+			return fmt.Errorf("%s: %w", errPrefix, err)
+		}
+
+		insertSQL := `
+			INSERT INTO binaries (secret_id, chunks, hash) VALUES ($1, $2, $3)
+			RETURNING binary_id`
+
+		var binaryID int64
+		if err = tx.QueryRow(ctx, insertSQL,
+			secretID,
+			binary.Chunks,
+			binary.Hash,
+		).Scan(&binaryID); err != nil {
+			return fmt.Errorf("%s failed to insert binary: %w", errPrefix, err)
+		}
+
+		if err = tx.Commit(ctx); err != nil {
+			return fmt.Errorf("%s failed to commit transaction: %w", errPrefix, err)
+		}
+
+		// Update the login ID after successful insert
+		binary.SecretID = secretID
+		binary.BinaryID = binaryID
+
+		logger.Log().Infof("Binary metadata with path=[%s] has been successfully created.", binary.Path)
+	}
+
 	return nil
 }
 

@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS "binaries" (
 	"secret_id" INTEGER NOT NULL,
 	"chunks" SMALLINT,
 	"hash" VARCHAR(255),
-	"name" VARCHAR(255),
 	PRIMARY KEY("binary_id", "secret_id")
 );
 

@@ -35,10 +35,10 @@ func (s *Retriever) VisitLogin(login *models.Login) error {
 
 	err := s.pool.QueryRow(ctx, selectSQL, login.Path).
 		Scan(
-			&login.EncryptedDataKey, 
+			&login.EncryptedDataKey,
 			&login.CreatedAt,
 			&login.CreatedBy,
-			&login.Login, 
+			&login.Login,
 			&login.Password,
 		)
 	if err != nil {

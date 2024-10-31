@@ -21,16 +21,16 @@ func (_m *EncryptionService) EXPECT() *EncryptionService_Expecter {
 	return &EncryptionService_Expecter{mock: &_m.Mock}
 }
 
-// DecryptStream provides a mock function with given fields: src, dst, encryptedDataKey
-func (_m *EncryptionService) DecryptStream(src io.Reader, dst io.Writer, encryptedDataKey []byte) error {
+// Decrypt provides a mock function with given fields: src, dst, encryptedDataKey
+func (_m *EncryptionService) Decrypt(src []byte, dst io.Writer, encryptedDataKey []byte) error {
 	ret := _m.Called(src, dst, encryptedDataKey)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DecryptStream")
+		panic("no return value specified for Decrypt")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(io.Reader, io.Writer, []byte) error); ok {
+	if rf, ok := ret.Get(0).(func([]byte, io.Writer, []byte) error); ok {
 		r0 = rf(src, dst, encryptedDataKey)
 	} else {
 		r0 = ret.Error(0)
@@ -39,51 +39,51 @@ func (_m *EncryptionService) DecryptStream(src io.Reader, dst io.Writer, encrypt
 	return r0
 }
 
-// EncryptionService_DecryptStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DecryptStream'
-type EncryptionService_DecryptStream_Call struct {
+// EncryptionService_Decrypt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Decrypt'
+type EncryptionService_Decrypt_Call struct {
 	*mock.Call
 }
 
-// DecryptStream is a helper method to define mock.On call
-//   - src io.Reader
+// Decrypt is a helper method to define mock.On call
+//   - src []byte
 //   - dst io.Writer
 //   - encryptedDataKey []byte
-func (_e *EncryptionService_Expecter) DecryptStream(src interface{}, dst interface{}, encryptedDataKey interface{}) *EncryptionService_DecryptStream_Call {
-	return &EncryptionService_DecryptStream_Call{Call: _e.mock.On("DecryptStream", src, dst, encryptedDataKey)}
+func (_e *EncryptionService_Expecter) Decrypt(src interface{}, dst interface{}, encryptedDataKey interface{}) *EncryptionService_Decrypt_Call {
+	return &EncryptionService_Decrypt_Call{Call: _e.mock.On("Decrypt", src, dst, encryptedDataKey)}
 }
 
-func (_c *EncryptionService_DecryptStream_Call) Run(run func(src io.Reader, dst io.Writer, encryptedDataKey []byte)) *EncryptionService_DecryptStream_Call {
+func (_c *EncryptionService_Decrypt_Call) Run(run func(src []byte, dst io.Writer, encryptedDataKey []byte)) *EncryptionService_Decrypt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(io.Reader), args[1].(io.Writer), args[2].([]byte))
+		run(args[0].([]byte), args[1].(io.Writer), args[2].([]byte))
 	})
 	return _c
 }
 
-func (_c *EncryptionService_DecryptStream_Call) Return(_a0 error) *EncryptionService_DecryptStream_Call {
+func (_c *EncryptionService_Decrypt_Call) Return(_a0 error) *EncryptionService_Decrypt_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *EncryptionService_DecryptStream_Call) RunAndReturn(run func(io.Reader, io.Writer, []byte) error) *EncryptionService_DecryptStream_Call {
+func (_c *EncryptionService_Decrypt_Call) RunAndReturn(run func([]byte, io.Writer, []byte) error) *EncryptionService_Decrypt_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// EncryptStream provides a mock function with given fields: src, dst
-func (_m *EncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([]byte, []byte, error) {
+// Encrypt provides a mock function with given fields: src, dst
+func (_m *EncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error) {
 	ret := _m.Called(src, dst)
 
 	if len(ret) == 0 {
-		panic("no return value specified for EncryptStream")
+		panic("no return value specified for Encrypt")
 	}
 
 	var r0 []byte
 	var r1 []byte
 	var r2 error
-	if rf, ok := ret.Get(0).(func(io.Reader, io.Writer) ([]byte, []byte, error)); ok {
+	if rf, ok := ret.Get(0).(func([]byte, io.Writer) ([]byte, []byte, error)); ok {
 		return rf(src, dst)
 	}
-	if rf, ok := ret.Get(0).(func(io.Reader, io.Writer) []byte); ok {
+	if rf, ok := ret.Get(0).(func([]byte, io.Writer) []byte); ok {
 		r0 = rf(src, dst)
 	} else {
 		if ret.Get(0) != nil {
@@ -91,7 +91,7 @@ func (_m *EncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([]byte
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(io.Reader, io.Writer) []byte); ok {
+	if rf, ok := ret.Get(1).(func([]byte, io.Writer) []byte); ok {
 		r1 = rf(src, dst)
 	} else {
 		if ret.Get(1) != nil {
@@ -99,7 +99,7 @@ func (_m *EncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([]byte
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(io.Reader, io.Writer) error); ok {
+	if rf, ok := ret.Get(2).(func([]byte, io.Writer) error); ok {
 		r2 = rf(src, dst)
 	} else {
 		r2 = ret.Error(2)
@@ -108,45 +108,45 @@ func (_m *EncryptionService) EncryptStream(src io.Reader, dst io.Writer) ([]byte
 	return r0, r1, r2
 }
 
-// EncryptionService_EncryptStream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EncryptStream'
-type EncryptionService_EncryptStream_Call struct {
+// EncryptionService_Encrypt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Encrypt'
+type EncryptionService_Encrypt_Call struct {
 	*mock.Call
 }
 
-// EncryptStream is a helper method to define mock.On call
-//   - src io.Reader
+// Encrypt is a helper method to define mock.On call
+//   - src []byte
 //   - dst io.Writer
-func (_e *EncryptionService_Expecter) EncryptStream(src interface{}, dst interface{}) *EncryptionService_EncryptStream_Call {
-	return &EncryptionService_EncryptStream_Call{Call: _e.mock.On("EncryptStream", src, dst)}
+func (_e *EncryptionService_Expecter) Encrypt(src interface{}, dst interface{}) *EncryptionService_Encrypt_Call {
+	return &EncryptionService_Encrypt_Call{Call: _e.mock.On("Encrypt", src, dst)}
 }
 
-func (_c *EncryptionService_EncryptStream_Call) Run(run func(src io.Reader, dst io.Writer)) *EncryptionService_EncryptStream_Call {
+func (_c *EncryptionService_Encrypt_Call) Run(run func(src []byte, dst io.Writer)) *EncryptionService_Encrypt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(io.Reader), args[1].(io.Writer))
+		run(args[0].([]byte), args[1].(io.Writer))
 	})
 	return _c
 }
 
-func (_c *EncryptionService_EncryptStream_Call) Return(_a0 []byte, _a1 []byte, _a2 error) *EncryptionService_EncryptStream_Call {
+func (_c *EncryptionService_Encrypt_Call) Return(_a0 []byte, _a1 []byte, _a2 error) *EncryptionService_Encrypt_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *EncryptionService_EncryptStream_Call) RunAndReturn(run func(io.Reader, io.Writer) ([]byte, []byte, error)) *EncryptionService_EncryptStream_Call {
+func (_c *EncryptionService_Encrypt_Call) RunAndReturn(run func([]byte, io.Writer) ([]byte, []byte, error)) *EncryptionService_Encrypt_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// EncryptStreamWithKey provides a mock function with given fields: src, dst, encryptedDataKey
-func (_m *EncryptionService) EncryptStreamWithKey(src io.Reader, dst io.Writer, encryptedDataKey []byte) error {
+// EncryptWithKey provides a mock function with given fields: src, dst, encryptedDataKey
+func (_m *EncryptionService) EncryptWithKey(src []byte, dst io.Writer, encryptedDataKey []byte) error {
 	ret := _m.Called(src, dst, encryptedDataKey)
 
 	if len(ret) == 0 {
-		panic("no return value specified for EncryptStreamWithKey")
+		panic("no return value specified for EncryptWithKey")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(io.Reader, io.Writer, []byte) error); ok {
+	if rf, ok := ret.Get(0).(func([]byte, io.Writer, []byte) error); ok {
 		r0 = rf(src, dst, encryptedDataKey)
 	} else {
 		r0 = ret.Error(0)
@@ -155,32 +155,32 @@ func (_m *EncryptionService) EncryptStreamWithKey(src io.Reader, dst io.Writer, 
 	return r0
 }
 
-// EncryptionService_EncryptStreamWithKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EncryptStreamWithKey'
-type EncryptionService_EncryptStreamWithKey_Call struct {
+// EncryptionService_EncryptWithKey_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EncryptWithKey'
+type EncryptionService_EncryptWithKey_Call struct {
 	*mock.Call
 }
 
-// EncryptStreamWithKey is a helper method to define mock.On call
-//   - src io.Reader
+// EncryptWithKey is a helper method to define mock.On call
+//   - src []byte
 //   - dst io.Writer
 //   - encryptedDataKey []byte
-func (_e *EncryptionService_Expecter) EncryptStreamWithKey(src interface{}, dst interface{}, encryptedDataKey interface{}) *EncryptionService_EncryptStreamWithKey_Call {
-	return &EncryptionService_EncryptStreamWithKey_Call{Call: _e.mock.On("EncryptStreamWithKey", src, dst, encryptedDataKey)}
+func (_e *EncryptionService_Expecter) EncryptWithKey(src interface{}, dst interface{}, encryptedDataKey interface{}) *EncryptionService_EncryptWithKey_Call {
+	return &EncryptionService_EncryptWithKey_Call{Call: _e.mock.On("EncryptWithKey", src, dst, encryptedDataKey)}
 }
 
-func (_c *EncryptionService_EncryptStreamWithKey_Call) Run(run func(src io.Reader, dst io.Writer, encryptedDataKey []byte)) *EncryptionService_EncryptStreamWithKey_Call {
+func (_c *EncryptionService_EncryptWithKey_Call) Run(run func(src []byte, dst io.Writer, encryptedDataKey []byte)) *EncryptionService_EncryptWithKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(io.Reader), args[1].(io.Writer), args[2].([]byte))
+		run(args[0].([]byte), args[1].(io.Writer), args[2].([]byte))
 	})
 	return _c
 }
 
-func (_c *EncryptionService_EncryptStreamWithKey_Call) Return(_a0 error) *EncryptionService_EncryptStreamWithKey_Call {
+func (_c *EncryptionService_EncryptWithKey_Call) Return(_a0 error) *EncryptionService_EncryptWithKey_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *EncryptionService_EncryptStreamWithKey_Call) RunAndReturn(run func(io.Reader, io.Writer, []byte) error) *EncryptionService_EncryptStreamWithKey_Call {
+func (_c *EncryptionService_EncryptWithKey_Call) RunAndReturn(run func([]byte, io.Writer, []byte) error) *EncryptionService_EncryptWithKey_Call {
 	_c.Call.Return(run)
 	return _c
 }
