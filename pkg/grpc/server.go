@@ -188,10 +188,6 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 }
 
 func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
-	_, ok := ctx.Value("username").(string)
-	if !ok {
-		return nil, status.Error(codes.Internal, "username not found in context")
-	}
 	var secret models.Secret
 	opts := []models.SecretOption{
 		models.WithPath(req.GetPath()),
@@ -339,6 +335,48 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 }
 
 func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.GophkeeperService_DownloadServer) error {
-	logger.Log().Info("Download")
+	binary := models.NewBinary(
+		[]models.SecretOption{
+			models.WithPath(req.Filename),
+		},
+		nil,
+	)
+	if err := srv.vault.RetrieveSecret(binary); err != nil {
+		return status.Errorf(codes.Internal, "failed to retrieve binary metadata: %v", err)
+	}
+
+	for i := range binary.Chunks {
+		chunk := models.NewBinary(
+			[]models.SecretOption{
+				models.WithPath(req.Filename),
+				models.WithEncryptedDataKey(binary.EncryptedDataKey),
+			},
+			[]models.BinaryOption{
+				models.WithChunkID(int64(i)),
+				models.WithChunks(binary.Chunks),
+			},
+		)
+		if err := srv.vault.RetrieveSecret(chunk); err != nil {
+			return status.Errorf(codes.Internal, "failed to retrieve chunk data: %v", err)
+		}
+		logger.Log().Infof("Download chunk: %d %d", chunk.ChunkID, len(chunk.Data))
+		chunkHash := md5.Sum(chunk.Data) 
+		if err := stream.Send(&pb.Chunk{
+			Filename: binary.Path,
+			Data: chunk.Data,
+			ChunkId: int32(chunk.ChunkID),
+			Hash: hex.EncodeToString(chunkHash[:]),
+		}); err != nil {
+			return status.Errorf(codes.Internal, "failed to send chunk data: %v", err)
+		}
+	}
+
+	if err := stream.Send(&pb.Chunk{
+		Filename: binary.Path,
+		Hash: binary.Hash,
+	}); err != nil {
+		return status.Errorf(codes.Internal, "failed to send chunk data: %v", err)
+	}
+
 	return nil
 }

@@ -44,7 +44,7 @@ func (v *Vault) StoreSecret(secret models.Secret) error {
 
 func (v *Vault) RetrieveSecret(secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
-		WithStorageRetriever(v.ctx, v.pool).
+		WithStorageRetriever(v.ctx, v.pool, v.objectStorage).
 		WithDecryption(v.encryptionService).
 		Build()
 

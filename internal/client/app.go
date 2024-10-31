@@ -6,7 +6,7 @@ import (
 	"gophkeeper.com/internal/client/cmd"
 )
 
-func Execute() error {
+func Execute(version, date, commit string) error {
 	cobra.OnInitialize(cmd.InitConfig)
 
 	rootCmd := &cobra.Command{
@@ -22,6 +22,7 @@ func Execute() error {
 		cmd.NewCardCmd(),
 		cmd.NewNoteCmd(),
 		cmd.NewBinaryCmd(),
+		cmd.NewBuildCmd(version, date, commit),
 	)
 
 	return rootCmd.Execute()

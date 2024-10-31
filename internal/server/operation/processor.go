@@ -69,8 +69,9 @@ func (b *ProcessorBuilder) WithStorageLister(ctx context.Context, pool *pgxpool.
 	return b
 }
 
-func (b *ProcessorBuilder) WithStorageRetriever(ctx context.Context, pool *pgxpool.Pool) *ProcessorBuilder {
-	b.visitors = append(b.visitors, storage.NewRetriever(ctx, pool))
+func (b *ProcessorBuilder) WithStorageRetriever(ctx context.Context, pool *pgxpool.Pool,
+	objectStorage *s3.ObjectStorage) *ProcessorBuilder {
+	b.visitors = append(b.visitors, storage.NewRetriever(ctx, pool, objectStorage))
 	return b
 }
 

@@ -145,6 +145,72 @@ func NewBinaryCmd() *cobra.Command {
 	createCmd.Flags().StringP("file", "f", "", "Binary filepath")
 	_ = createCmd.MarkFlagRequired("file")
 
+	getCmd := &cobra.Command{
+		Use:   "get",
+		Short: "Get binary data",
+		Run: func(cmd *cobra.Command, _ []string) {
+			path, _ := cmd.Flags().GetString("path")
+			output, _ := cmd.Flags().GetString("output")
+
+			file, err := os.Create(output)
+			if err != nil {
+				fmt.Printf("Failed to create a new file: %v\n", err)
+				os.Exit(1)
+			}
+			defer file.Close()
+
+			stream, err := client.Download(context.Background(), &pb.DownloadRequest{
+				Filename: path,
+			})
+			if err != nil {
+				fmt.Printf("failed to create download stream: %v\n", err)
+				os.Exit(1)
+			}
+
+			fileHash := NewFileHash()
+			var i = 0
+			for {
+				chunk, err := stream.Recv()
+				if err == io.EOF {
+					return
+				}
+				if err != nil {
+					fmt.Printf("failed to receive chunk: %v", err)
+					_ = os.Remove(file.Name())
+					os.Exit(1)
+				}
+				if chunk.Data != nil {
+					currentHash := fileHash.AddChunk(chunk.ChunkId, chunk.Data)
+					if chunk.Hash != currentHash {
+						fmt.Println("aborted upload due to chunk hash mismatch")
+						_ = os.Remove(file.Name())
+						os.Exit(1)
+					}
+					_, err = file.Write(chunk.Data)
+					if err != nil {
+						fmt.Println("aborted due to error writing to file")
+						_ = os.Remove(file.Name())
+						os.Exit(1)
+					}
+					i++
+				} else {
+					if chunk.Hash != fileHash.Complete() {
+						fmt.Println("aborted upload due to file hash mismatch")
+						_ = os.Remove(file.Name())
+						os.Exit(1)
+					}
+					break
+				}
+			}
+
+			fmt.Printf("Download binary %s with %d chunks completed.\n", output, i)
+		},
+	}
+	getCmd.Flags().StringP("path", "p", "", "Binary path")
+	getCmd.Flags().StringP("output", "o", "", "Output path")
+	_ = getCmd.MarkFlagRequired("file")
+	_ = getCmd.MarkFlagRequired("output")
+
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete binary",
@@ -165,7 +231,7 @@ func NewBinaryCmd() *cobra.Command {
 	deleteCmd.Flags().StringP("path", "p", "", "Binary path")
 	_ = deleteCmd.MarkFlagRequired("path")
 
-	binaryCmd.AddCommand(listCmd, createCmd, deleteCmd)
+	binaryCmd.AddCommand(listCmd, createCmd, getCmd, deleteCmd)
 
 	return binaryCmd
 }
