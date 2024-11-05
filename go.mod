@@ -3,6 +3,7 @@ module gophkeeper.com
 go 1.23.0
 
 require (
+	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/caarlos0/env/v11 v11.2.2
 	github.com/minio/minio-go/v7 v7.0.79
 	github.com/spf13/cobra v1.8.1
@@ -20,7 +21,6 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

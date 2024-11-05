@@ -10,10 +10,16 @@ import (
 	"gophkeeper.com/internal/client/jwt"
 )
 
+var publicMethods = map[string]bool{
+	"/api.v1.GophkeeperService/Login": true,
+	"/api.v1.GophkeeperService/Register": true,
+	"/api.v1.GophkeeperService/RefreshToken": true,
+}
+
 func AuthInterceptor(tokenProvider *jwt.TokenProvider) grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		// Skip auth for login/register
-		if method == "/api.v1.GophkeeperService/Login" || method == "/api.v1.GophkeeperService/Register" {
+		if publicMethods[method] {
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}
 

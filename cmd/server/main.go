@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
+	"github.com/caarlos0/env"
 
 	"gophkeeper.com/internal/common/logger"
 	"gophkeeper.com/internal/server"
@@ -19,20 +20,31 @@ import (
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
+type config struct {
+	Address       string `env:"ADDRESS" envDefault:"localhost:8081"`
+	DatabaseDSN   string `env:"DATABASE_DSN" envDefault:"postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"`
+	LogLevel      string `env:"LOG_LEVEL" envDefault:"DEBUG"`
+	AccessSecret  string `env:"ACCESS_SECRET" envDefault:"access_secret"`
+	RefreshSecret string `env:"REFRESH_SECRET" envDefault:"refresh_secret"`
+}
+
 const (
-	ServerPort           = "8081"
 	AccessTokenTTLHours  = 1
 	RefreshTokenTTLHours = 24
 )
 
 func main() {
-	if err := logger.Initialize("debug"); err != nil {
+	var cfg config
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("Cannot parse config: %s", err)
+	}
+
+	if err := logger.Initialize(cfg.LogLevel); err != nil {
 		log.Fatalf("Cannot instantiate zap logger: %s", err)
 	}
 
 	ctx := context.Background()
-	dsn := "postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := pgxpool.New(ctx, cfg.DatabaseDSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection pool: %s", err)
 	}
@@ -48,13 +60,13 @@ func main() {
 	}
 	encryptionService := service.NewStandardEncryptionService(kms)
 	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
-	lis, err := net.Listen("tcp", "localhost:"+ServerPort)
+	lis, err := net.Listen("tcp", cfg.Address)
 	if err != nil {
 		log.Fatalf("failed to run gRPC server: %v", err)
 	}
 	userRepo := storage.NewUserRepo(pool)
-	authService := service.NewJWTAuthService(userRepo, []byte("access_secret"),
-		[]byte("refresh_secret"), AccessTokenTTLHours*time.Hour, RefreshTokenTTLHours*time.Hour)
+	authService := service.NewJWTAuthService(userRepo, []byte(cfg.AccessSecret),
+		[]byte(cfg.RefreshSecret), AccessTokenTTLHours*time.Hour, RefreshTokenTTLHours*time.Hour)
 	authInterceptor := middleware.NewAuthInterceptor(authService)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(authInterceptor.Unary()),
@@ -62,7 +74,7 @@ func main() {
 	)
 	pb.RegisterGophkeeperServiceServer(grpcServer, pgrpc.NewGophkeeperServer(vault, authService, userRepo))
 
-	logger.Log().Infof("Starting gRPC server on port %s...", ServerPort)
+	logger.Log().Infof("Starting gRPC server %s...", cfg.Address)
 	if err = grpcServer.Serve(lis); err != nil {
 		log.Fatalf("cannot serve gRPC server: %v", err)
 	}
