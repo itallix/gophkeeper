@@ -14,15 +14,15 @@ import (
 )
 
 type Retriever struct {
-	pool    *pgxpool.Pool
-	context context.Context
+	pool          *pgxpool.Pool
+	context       context.Context
 	objectStorage *s3.ObjectStorage
 }
 
 func NewRetriever(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectStorage) *Retriever {
 	return &Retriever{
-		context: ctx,
-		pool:    pool,
+		context:       ctx,
+		pool:          pool,
 		objectStorage: objectStorage,
 	}
 }
@@ -117,9 +117,9 @@ func (s *Retriever) VisitBinary(binary *models.Binary) error {
 
 		err := s.pool.QueryRow(ctx, selectSQL, binary.Path).
 			Scan(
-				&binary.EncryptedDataKey, 
-				&binary.CreatedAt, 
-				&binary.CreatedBy, 
+				&binary.EncryptedDataKey,
+				&binary.CreatedAt,
+				&binary.CreatedBy,
 				&binary.Chunks,
 				&binary.Hash,
 			)
@@ -132,7 +132,7 @@ func (s *Retriever) VisitBinary(binary *models.Binary) error {
 		if err != nil {
 			return fmt.Errorf("error getting chunk data from storage: %w", err)
 		}
-		defer func(){
+		defer func() {
 			_ = reader.Close()
 		}()
 		data, err := io.ReadAll(reader)

@@ -37,14 +37,15 @@ func NewGophkeeperServer(vault *server.Vault, authService service.Authentication
 }
 
 func (srv *GophkeeperServer) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
-	token, err := srv.authService.Authenticate(ctx, req.GetLogin(), req.GetPassword())
+	pair, err := srv.authService.Authenticate(ctx, req.GetLogin(), req.GetPassword())
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
 
 	resp := &pb.AuthResponse{
-		Token:  token,
-		UserId: req.GetLogin(),
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
+		UserId:       req.GetLogin(),
 	}
 
 	return resp, nil
@@ -68,14 +69,34 @@ func (srv *GophkeeperServer) Register(ctx context.Context, req *pb.RegisterReque
 		return nil, status.Errorf(codes.Unauthenticated, "error creating a new user %v", err)
 	}
 
-	token, err := srv.authService.GetToken(req.GetLogin())
+	pair, err := srv.authService.GetTokenPair(req.GetLogin())
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to generate a token: %v", err)
 	}
 
 	return &pb.AuthResponse{
-		Token:  token,
-		UserId: req.GetLogin(),
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
+		UserId:       req.GetLogin(),
+	}, nil
+}
+
+// New method to handle token refresh.
+func (srv *GophkeeperServer) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.AuthResponse, error) {
+	pair, err := srv.authService.RefreshTokens(req.GetRefreshToken())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+	}
+
+	username, err := srv.authService.ValidateAccessToken(pair.AccessToken)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to validate new access token")
+	}
+
+	return &pb.AuthResponse{
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
+		UserId:       username,
 	}, nil
 }
 
@@ -303,7 +324,7 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 				models.WithChunkID(int64(chunk.GetChunkId())),
 				models.WithData(chunk.GetData()),
 			})
-		if err := srv.vault.StoreSecret(binary); err != nil {
+		if err = srv.vault.StoreSecret(binary); err != nil {
 			return status.Errorf(codes.Internal, "failed to store chunk: %v", err)
 		}
 		if encDataKey == nil {
@@ -337,7 +358,7 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.GophkeeperService_DownloadServer) error {
 	binary := models.NewBinary(
 		[]models.SecretOption{
-			models.WithPath(req.Filename),
+			models.WithPath(req.GetFilename()),
 		},
 		nil,
 	)
@@ -348,7 +369,7 @@ func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.Gophkee
 	for i := range binary.Chunks {
 		chunk := models.NewBinary(
 			[]models.SecretOption{
-				models.WithPath(req.Filename),
+				models.WithPath(req.GetFilename()),
 				models.WithEncryptedDataKey(binary.EncryptedDataKey),
 			},
 			[]models.BinaryOption{
@@ -360,12 +381,12 @@ func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.Gophkee
 			return status.Errorf(codes.Internal, "failed to retrieve chunk data: %v", err)
 		}
 		logger.Log().Infof("Download chunk: %d %d", chunk.ChunkID, len(chunk.Data))
-		chunkHash := md5.Sum(chunk.Data) 
+		chunkHash := md5.Sum(chunk.Data)
 		if err := stream.Send(&pb.Chunk{
 			Filename: binary.Path,
-			Data: chunk.Data,
-			ChunkId: int32(chunk.ChunkID),
-			Hash: hex.EncodeToString(chunkHash[:]),
+			Data:     chunk.Data,
+			ChunkId:  int32(chunk.ChunkID),
+			Hash:     hex.EncodeToString(chunkHash[:]),
 		}); err != nil {
 			return status.Errorf(codes.Internal, "failed to send chunk data: %v", err)
 		}
@@ -373,7 +394,7 @@ func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.Gophkee
 
 	if err := stream.Send(&pb.Chunk{
 		Filename: binary.Path,
-		Hash: binary.Hash,
+		Hash:     binary.Hash,
 	}); err != nil {
 		return status.Errorf(codes.Internal, "failed to send chunk data: %v", err)
 	}

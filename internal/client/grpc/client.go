@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"gophkeeper.com/internal/client/grpc/middleware"
+	"gophkeeper.com/internal/client/jwt"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
@@ -20,12 +21,12 @@ func (dc *GophkeeperClient) Close() error {
 	return dc.conn.Close()
 }
 
-func NewGophkeeperClient(targetURL string, token string) (*GophkeeperClient, error) {
+func NewGophkeeperClient(targetURL string, tokenProvider *jwt.TokenProvider) (*GophkeeperClient, error) {
 	// TODO: implement tokenProvider with refresh tokens
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(middleware.AuthInterceptor(token)),
-		grpc.WithStreamInterceptor(middleware.StreamAuthInterceptor(token)),
+		grpc.WithUnaryInterceptor(middleware.AuthInterceptor(tokenProvider)),
+		grpc.WithStreamInterceptor(middleware.StreamAuthInterceptor(tokenProvider)),
 	}
 	conn, err := grpc.NewClient(targetURL, opts...)
 	if err != nil {

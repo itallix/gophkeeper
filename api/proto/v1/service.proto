@@ -6,6 +6,7 @@ service GophkeeperService {
     // unauthenticated APIs
     rpc Login(LoginRequest) returns (AuthResponse) {}
     rpc Register(RegisterRequest) returns (AuthResponse) {}
+    rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse) {}
 
     // authenticated APIs
     rpc Create(CreateRequest) returns (CreateResponse) {}
@@ -27,9 +28,14 @@ message LoginRequest {
     string password = 2;
 }
 
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
 message AuthResponse {
-    string token = 1;
-    string user_id = 2;
+    string access_token = 1;
+    string refresh_token = 2;
+    string user_id = 3;
 }
 
 message CreateRequest {

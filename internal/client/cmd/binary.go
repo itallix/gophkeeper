@@ -180,13 +180,13 @@ func NewBinaryCmd() *cobra.Command {
 					os.Exit(1)
 				}
 				if chunk.Data != nil {
-					currentHash := fileHash.AddChunk(chunk.ChunkId, chunk.Data)
-					if chunk.Hash != currentHash {
+					currentHash := fileHash.AddChunk(chunk.GetChunkId(), chunk.GetData())
+					if chunk.GetHash() != currentHash {
 						fmt.Println("aborted upload due to chunk hash mismatch")
 						_ = os.Remove(file.Name())
 						os.Exit(1)
 					}
-					_, err = file.Write(chunk.Data)
+					_, err = file.Write(chunk.GetData())
 					if err != nil {
 						fmt.Println("aborted due to error writing to file")
 						_ = os.Remove(file.Name())
@@ -195,7 +195,7 @@ func NewBinaryCmd() *cobra.Command {
 					i++
 					fmt.Print(".")
 				} else {
-					if chunk.Hash != fileHash.Complete() {
+					if chunk.GetHash() != fileHash.Complete() {
 						fmt.Println("aborted upload due to file hash mismatch")
 						_ = os.Remove(file.Name())
 						os.Exit(1)

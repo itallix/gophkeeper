@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"gophkeeper.com/internal/client/grpc"
+	"gophkeeper.com/internal/client/jwt"
 )
 
 type Config struct {
@@ -19,9 +18,10 @@ type Config struct {
 }
 
 var (
-	cfgFile string
-	config  Config
-	client  *grpc.GophkeeperClient
+	cfgFile       string
+	config        Config
+	client        *grpc.GophkeeperClient
+	tokenProvider *jwt.TokenProvider
 )
 
 func InitConfig() {
@@ -52,53 +52,17 @@ func InitConfig() {
 	}
 
 	var err error
-	token, _ := LoadToken()
-	client, err = grpc.NewGophkeeperClient(config.ServerURL, token)
+	tokenProvider = jwt.NewTokenProvider(config.TokenFile)
+	client, err = grpc.NewGophkeeperClient(config.ServerURL, tokenProvider)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC client: %v\n", err)
 	}
 }
 
-// Token storage with file permissions.
-func SaveToken(token string) error {
-	data := struct {
-		Token string `json:"token"`
-	}{
-		Token: token,
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal token: %w", err)
-	}
-
-	// Create file with user-only read/write permissions
-	err = os.WriteFile(config.TokenFile, jsonData, 0600)
-	if err != nil {
-		return fmt.Errorf("failed to write token file: %w", err)
-	}
-
-	return nil
-}
-
-func LoadToken() (string, error) {
-	data, err := os.ReadFile(config.TokenFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read token file: %w", err)
-	}
-
-	var tokenData struct {
-		Token string `json:"token"`
-	}
-
-	err = json.Unmarshal(data, &tokenData)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse token file: %w", err)
-	}
-
-	return tokenData.Token, nil
-}
-
 func GetConfig() *Config {
 	return &config
+}
+
+func GetTokenProvider() *jwt.TokenProvider {
+	return tokenProvider
 }

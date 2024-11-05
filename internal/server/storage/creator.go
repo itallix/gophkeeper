@@ -9,9 +9,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"gophkeeper.com/internal/common/logger"
 	"gophkeeper.com/internal/server/models"
 	"gophkeeper.com/internal/server/s3"
-	"gophkeeper.com/internal/common/logger"
 )
 
 type Creator struct {

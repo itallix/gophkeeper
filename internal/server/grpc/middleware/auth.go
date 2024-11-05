@@ -13,15 +13,15 @@ import (
 )
 
 type AuthInterceptor struct {
-	authService service.AuthenticationService
-	// List of methods that don't require auth
-	noAuthMethods map[string]bool
+	authService   service.AuthenticationService
+	noAuthMethods map[string]bool // List of methods that don't require auth
 }
 
 func NewAuthInterceptor(authService service.AuthenticationService) *AuthInterceptor {
 	noAuthMethods := map[string]bool{
-		"/api.v1.GophkeeperService/Register": true,
-		"/api.v1.GophkeeperService/Login":    true,
+		"/api.v1.GophkeeperService/Register":     true,
+		"/api.v1.GophkeeperService/Login":        true,
+		"/api.v1.GophkeeperService/RefreshToken": true,
 	}
 
 	return &AuthInterceptor{
@@ -42,14 +42,12 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 
-		// Extract token from metadata
 		token, err := i.extractToken(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		// Validate token
-		username, err := i.authService.ValidateToken(token)
+		username, err := i.authService.ValidateAccessToken(token)
 		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
@@ -80,14 +78,12 @@ func (i *AuthInterceptor) Stream() grpc.StreamServerInterceptor {
 	) error {
 		ctx := ss.Context()
 
-		// Extract token from metadata
 		token, err := i.extractToken(ctx)
 		if err != nil {
 			return err
 		}
 
-		// Validate token
-		username, err := i.authService.ValidateToken(token)
+		username, err := i.authService.ValidateAccessToken(token)
 		if err != nil {
 			return status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}

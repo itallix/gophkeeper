@@ -19,7 +19,11 @@ import (
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
-const ServerPort = "8081"
+const (
+	ServerPort           = "8081"
+	AccessTokenTTLHours  = 1
+	RefreshTokenTTLHours = 24
+)
 
 func main() {
 	if err := logger.Initialize("debug"); err != nil {
@@ -49,7 +53,8 @@ func main() {
 		log.Fatalf("failed to run gRPC server: %v", err)
 	}
 	userRepo := storage.NewUserRepo(pool)
-	authService := service.NewJWTAuthService(userRepo, []byte("secret"), 1*time.Hour)
+	authService := service.NewJWTAuthService(userRepo, []byte("access_secret"),
+		[]byte("refresh_secret"), AccessTokenTTLHours*time.Hour, RefreshTokenTTLHours*time.Hour)
 	authInterceptor := middleware.NewAuthInterceptor(authService)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(authInterceptor.Unary()),

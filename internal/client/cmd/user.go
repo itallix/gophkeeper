@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"gophkeeper.com/internal/client/jwt"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
@@ -51,8 +52,8 @@ func NewUserCmd() *cobra.Command {
 				fmt.Printf("Failed to register: %v\n", err)
 				os.Exit(1)
 			}
-			err = SaveToken(resp.GetToken())
-			if err != nil {
+			tokenData := jwt.NewToken(resp.GetAccessToken(), resp.GetRefreshToken())
+			if err = tokenProvider.SaveToken(tokenData); err != nil {
 				fmt.Printf("Failed to save token: %v\n", err)
 				os.Exit(1)
 			}
@@ -85,8 +86,8 @@ func NewUserCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			err = SaveToken(resp.GetToken())
-			if err != nil {
+			tokenData := jwt.NewToken(resp.GetAccessToken(), resp.GetRefreshToken())
+			if err = tokenProvider.SaveToken(tokenData); err != nil {
 				fmt.Printf("Failed to save token: %v\n", err)
 				os.Exit(1)
 			}
