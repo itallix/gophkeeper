@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	m "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/minio"
@@ -57,7 +55,7 @@ func (suite *VaultTestSuite) SetupSuite() {
 				wait.ForListeningPort("5432/tcp"),
 			).WithDeadline(1*time.Minute),
 		))
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	suite.postgresContainer = postgresContainer
 
 	minioContainer, err := minio.Run(ctx,
@@ -65,16 +63,16 @@ func (suite *VaultTestSuite) SetupSuite() {
 		minio.WithUsername(minioAccessKey),
 		minio.WithPassword(minioSecretKey),
 		testcontainers.WithEnv(map[string]string{"MINIO_DEFAULT_BUCKETS": "binaries"}))
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	endpoint, err := minioContainer.Endpoint(ctx, "")
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	client, err := m.New(endpoint, &m.Options{
 		Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
 		Secure: false,
 	})
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	for _, bucket := range []string{"binaries"} {
 		_ = client.MakeBucket(ctx, bucket, m.MakeBucketOptions{})
@@ -85,50 +83,50 @@ func (suite *VaultTestSuite) SetupSuite() {
 
 func (suite *VaultTestSuite) TearDownSuite() {
 	ctx := context.Background()
-	require.NoError(suite.T(), suite.minioContainer.Terminate(ctx))
-	require.NoError(suite.T(), suite.postgresContainer.Terminate(ctx))
+	suite.Require().NoError(suite.minioContainer.Terminate(ctx))
+	suite.Require().NoError(suite.postgresContainer.Terminate(ctx))
 }
 
 func (suite *VaultTestSuite) applyMigrations(dsn string) {
 	db, err := sql.Open("postgres", dsn)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	defer db.Close()
 
 	driver, err := mp.WithInstance(db, &mp.Config{})
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://../../db/migrations",
 		"postgres",
 		driver,
 	)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
-		require.NoError(suite.T(), err)
+		suite.Require().NoError(err)
 	}
 }
 
 func (suite *VaultTestSuite) TestVaultAPI() {
 	ctx := context.Background()
 	postgresEndpoint, err := suite.postgresContainer.Endpoint(ctx, "")
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", postgresUser, postgresPassword,
 		postgresEndpoint, postgresDatabase)
 	suite.applyMigrations(dsn)
 	pool, err := pgxpool.New(ctx, dsn)
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	objectStorage, err := s3.NewObjectStorage()
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	kms, err := service.NewRSAKMS()
-	require.NoError(suite.T(), err)
+	suite.Require().NoError(err)
 	encryptionService := service.NewStandardEncryptionService(kms)
 	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
 
 	userRepo := storage.NewUserRepo(pool)
 	username := "mark"
-	require.NoError(suite.T(), userRepo.CreateUser(ctx, username, "aurelius"))
+	suite.Require().NoError(userRepo.CreateUser(ctx, username, "aurelius"))
 
 	suite.Run("logins", func() {
 		secret := models.NewLogin([]models.SecretOption{
@@ -139,27 +137,27 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 			models.WithLogin("leo"),
 			models.WithPassword("secret"),
 		})
-		require.NoError(suite.T(), vault.StoreSecret(secret))
+		suite.Require().NoError(vault.StoreSecret(secret))
 
 		retrieved := models.NewLogin([]models.SecretOption{
 			models.WithPath("login0"),
 		}, nil)
-		require.NoError(suite.T(), vault.RetrieveSecret(retrieved))
-		assert.Equal(suite.T(), "leo", retrieved.Login)
-		assert.Equal(suite.T(), "secret", string(retrieved.Password))
+		suite.Require().NoError(vault.RetrieveSecret(retrieved))
+		suite.Equal("leo", retrieved.Login)
+		suite.Equal("secret", string(retrieved.Password))
 
 		secrets, err := vault.ListSecrets(models.NewLogin(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Len(suite.T(), secrets, 1)
+		suite.Require().NoError(err)
+		suite.Len(secrets, 1)
 
 		deleted := models.NewLogin([]models.SecretOption{
 			models.WithPath("login0"),
 		}, nil)
-		require.NoError(suite.T(), vault.DeleteSecret(deleted))
+		suite.Require().NoError(vault.DeleteSecret(deleted))
 
 		secrets, err = vault.ListSecrets(models.NewLogin(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Empty(suite.T(), secrets)
+		suite.Require().NoError(err)
+		suite.Empty(secrets)
 	})
 
 	suite.Run("cards", func() {
@@ -171,32 +169,32 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 			models.WithCardNumber("1122334455667788"),
 			models.WithCardHolder("Mark Aurelius"),
 			models.WithCVC("247"),
-			models.WithExpiry(8, int16(time.Now().Year() + 2)),
+			models.WithExpiry(8, int16(time.Now().Year()+2)),
 		})
-		require.NoError(suite.T(), vault.StoreSecret(secret))
+		suite.Require().NoError(vault.StoreSecret(secret))
 
 		retrieved := models.NewCard([]models.SecretOption{
 			models.WithPath("card0"),
 		}, nil)
-		require.NoError(suite.T(), vault.RetrieveSecret(retrieved))
-		assert.Equal(suite.T(), "1122334455667788", string(retrieved.Number))
-		assert.Equal(suite.T(), "Mark Aurelius", retrieved.CardholderName)
-		assert.Equal(suite.T(), "247", string(retrieved.CVC))
-		assert.Equal(suite.T(), int8(8), retrieved.ExpiryMonth)
-		assert.Equal(suite.T(), int16(time.Now().Year() + 2), retrieved.ExpiryYear)
+		suite.Require().NoError(vault.RetrieveSecret(retrieved))
+		suite.Equal("1122334455667788", string(retrieved.Number))
+		suite.Equal("Mark Aurelius", retrieved.CardholderName)
+		suite.Equal("247", string(retrieved.CVC))
+		suite.Equal(int8(8), retrieved.ExpiryMonth)
+		suite.Equal(int16(time.Now().Year()+2), retrieved.ExpiryYear)
 
 		secrets, err := vault.ListSecrets(models.NewCard(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Len(suite.T(), secrets, 1)
+		suite.Require().NoError(err)
+		suite.Len(secrets, 1)
 
 		deleted := models.NewCard([]models.SecretOption{
 			models.WithPath("card0"),
 		}, nil)
-		require.NoError(suite.T(), vault.DeleteSecret(deleted))
+		suite.Require().NoError(vault.DeleteSecret(deleted))
 
 		secrets, err = vault.ListSecrets(models.NewCard(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Empty(suite.T(), secrets)
+		suite.Require().NoError(err)
+		suite.Empty(secrets)
 	})
 
 	suite.Run("notes", func() {
@@ -207,26 +205,26 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 		}, []models.NoteOption{
 			models.WithText("lorem ipsum"),
 		})
-		require.NoError(suite.T(), vault.StoreSecret(secret))
+		suite.Require().NoError(vault.StoreSecret(secret))
 
 		retrieved := models.NewNote([]models.SecretOption{
 			models.WithPath("note0"),
 		}, nil)
-		require.NoError(suite.T(), vault.RetrieveSecret(retrieved))
-		assert.Equal(suite.T(), "lorem ipsum", string(retrieved.Text))
+		suite.Require().NoError(vault.RetrieveSecret(retrieved))
+		suite.Equal("lorem ipsum", string(retrieved.Text))
 
 		secrets, err := vault.ListSecrets(models.NewNote(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Len(suite.T(), secrets, 1)
+		suite.Require().NoError(err)
+		suite.Len(secrets, 1)
 
 		deleted := models.NewNote([]models.SecretOption{
 			models.WithPath("note0"),
 		}, nil)
-		require.NoError(suite.T(), vault.DeleteSecret(deleted))
+		suite.Require().NoError(vault.DeleteSecret(deleted))
 
 		secrets, err = vault.ListSecrets(models.NewNote(nil, nil))
-		require.NoError(suite.T(), err)
-		assert.Empty(suite.T(), secrets)
+		suite.Require().NoError(err)
+		suite.Empty(secrets)
 	})
 }
 

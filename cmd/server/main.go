@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
-	"github.com/caarlos0/env"
 
 	"gophkeeper.com/internal/common/logger"
 	"gophkeeper.com/internal/server"

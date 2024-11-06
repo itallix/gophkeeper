@@ -11,8 +11,8 @@ import (
 )
 
 var publicMethods = map[string]bool{
-	"/api.v1.GophkeeperService/Login": true,
-	"/api.v1.GophkeeperService/Register": true,
+	"/api.v1.GophkeeperService/Login":        true,
+	"/api.v1.GophkeeperService/Register":     true,
 	"/api.v1.GophkeeperService/RefreshToken": true,
 }
 
