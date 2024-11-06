@@ -9,7 +9,7 @@ import (
 
 // EncryptionService handles encryption and decryption using data keys.
 type EncryptionService interface {
-	Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error)
+	Encrypt(src []byte, dst io.Writer) ([]byte, error)
 	EncryptWithKey(src []byte, dst io.Writer, encryptedDataKey []byte) error
 	Decrypt(src []byte, dst io.Writer, encryptedDataKey []byte) error
 }
@@ -22,38 +22,37 @@ func NewStandardEncryptionService(kms KMS) *StandardEncryptionService {
 	return &StandardEncryptionService{kms: kms}
 }
 
-func (s *StandardEncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error) {
+func (s *StandardEncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, error) {
 	// Generate a new data key for this encryption operation
 	dataKey, encryptedDataKey, err := s.kms.GenerateDataKey()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	block, err := aes.NewCipher(dataKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
 	_, err = rand.Read(nonce)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ciphertext := gcm.Seal(nonce, nonce, src, nil)
 
 	_, err = dst.Write(ciphertext)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	// Return the data key and encrypted data key, which will be stored with the file metadata
-	return dataKey, encryptedDataKey, nil
+	return encryptedDataKey, nil
 }
 
 func (s *StandardEncryptionService) EncryptWithKey(src []byte, dst io.Writer, encryptedDataKey []byte) error {

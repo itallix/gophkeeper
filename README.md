@@ -1,6 +1,13 @@
 # GophKeeper
 
+[![Tests](https://github.com/itallix/gophkeeper/actions/workflows/test.yml/badge.svg)](https://github.com/itallix/gophkeeper/actions/workflows/test.yml)
+[![Lint](https://github.com/itallix/gophkeeper/actions/workflows/lint.yml/badge.svg)](https://github.com/itallix/gophkeeper/actions/workflows/lint.yml)
+[![codecov](https://codecov.io/gh/itallix/gophkeeper/branch/main/graph/badge.svg)](https://codecov.io/gh/itallix/gophkeeper)
+[![Release](https://img.shields.io/github/release/itallix/gophkeeper.svg)](https://github.com/itallix/gophkeeper/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/itallix/gophkeeper)](https://goreportcard.com/report/github.com/itallix/gophkeeper)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+# Gophkeeper Client
 
 A secure and reliable client-server system for storing sensitive information, written in Go. GophKeeper provides encrypted storage for various types of data including credentials, binary files, text notes, and more.
 

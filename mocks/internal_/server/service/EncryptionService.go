@@ -70,7 +70,7 @@ func (_c *EncryptionService_Decrypt_Call) RunAndReturn(run func([]byte, io.Write
 }
 
 // Encrypt provides a mock function with given fields: src, dst
-func (_m *EncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte, error) {
+func (_m *EncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, error) {
 	ret := _m.Called(src, dst)
 
 	if len(ret) == 0 {
@@ -78,9 +78,8 @@ func (_m *EncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte,
 	}
 
 	var r0 []byte
-	var r1 []byte
-	var r2 error
-	if rf, ok := ret.Get(0).(func([]byte, io.Writer) ([]byte, []byte, error)); ok {
+	var r1 error
+	if rf, ok := ret.Get(0).(func([]byte, io.Writer) ([]byte, error)); ok {
 		return rf(src, dst)
 	}
 	if rf, ok := ret.Get(0).(func([]byte, io.Writer) []byte); ok {
@@ -91,21 +90,13 @@ func (_m *EncryptionService) Encrypt(src []byte, dst io.Writer) ([]byte, []byte,
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func([]byte, io.Writer) []byte); ok {
+	if rf, ok := ret.Get(1).(func([]byte, io.Writer) error); ok {
 		r1 = rf(src, dst)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]byte)
-		}
+		r1 = ret.Error(1)
 	}
 
-	if rf, ok := ret.Get(2).(func([]byte, io.Writer) error); ok {
-		r2 = rf(src, dst)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
 
 // EncryptionService_Encrypt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Encrypt'
@@ -127,12 +118,12 @@ func (_c *EncryptionService_Encrypt_Call) Run(run func(src []byte, dst io.Writer
 	return _c
 }
 
-func (_c *EncryptionService_Encrypt_Call) Return(_a0 []byte, _a1 []byte, _a2 error) *EncryptionService_Encrypt_Call {
-	_c.Call.Return(_a0, _a1, _a2)
+func (_c *EncryptionService_Encrypt_Call) Return(_a0 []byte, _a1 error) *EncryptionService_Encrypt_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *EncryptionService_Encrypt_Call) RunAndReturn(run func([]byte, io.Writer) ([]byte, []byte, error)) *EncryptionService_Encrypt_Call {
+func (_c *EncryptionService_Encrypt_Call) RunAndReturn(run func([]byte, io.Writer) ([]byte, error)) *EncryptionService_Encrypt_Call {
 	_c.Call.Return(run)
 	return _c
 }
