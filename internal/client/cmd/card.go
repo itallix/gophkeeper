@@ -1,12 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
@@ -20,24 +19,24 @@ func NewCardCmd() *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available cards",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			resp, err := client.List(context.Background(), &pb.ListRequest{
 				Type: pb.DataType_DATA_TYPE_CARD,
 			})
 			if err != nil {
-				fmt.Printf("Error listing cards: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error listing cards: %w", err)
 			}
 			for _, name := range resp.GetSecrets() {
-				fmt.Println(name)
+				cmd.Println(name)
 			}
+			return nil
 		},
 	}
 
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Retrieve card data by path",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Get(context.Background(), &pb.GetRequest{
@@ -45,18 +44,18 @@ func NewCardCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Failed to retrieve login data: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to retrieve login data: %w", err)
 			}
 			baseData := resp.GetData().GetBase()
 			cardData := resp.GetData().GetCard()
-			fmt.Printf("Card holder: %s\n", cardData.GetCardHolder())
-			fmt.Printf("Card number: %s\n", cardData.GetNumber())
-			fmt.Printf("Expiry month/year: %d/%d\n", cardData.GetExpiryMonth(), cardData.GetExpiryYear())
-			fmt.Printf("CVC: %s\n", cardData.GetCvv())
-			fmt.Printf("Created at: %s\n", baseData.GetCreatedAt())
-			fmt.Printf("Created by: %s\n", baseData.GetCreatedBy())
-			fmt.Printf("Metadata: %s\n", baseData.GetMetadata())
+			cmd.Printf("Card holder: %s\n", cardData.GetCardHolder())
+			cmd.Printf("Card number: %s\n", cardData.GetNumber())
+			cmd.Printf("Expiry month/year: %d/%d\n", cardData.GetExpiryMonth(), cardData.GetExpiryYear())
+			cmd.Printf("CVC: %s\n", cardData.GetCvv())
+			cmd.Printf("Created at: %s\n", baseData.GetCreatedAt())
+			cmd.Printf("Created by: %s\n", baseData.GetCreatedBy())
+			cmd.Printf("Metadata: %s\n", baseData.GetMetadata())
+			return nil
 		},
 	}
 	getCmd.Flags().StringP("path", "p", "", "Card path")
@@ -65,36 +64,31 @@ func NewCardCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new card",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
+			reader := bufio.NewReader(cmd.InOrStdin())
 
-			holderName, err := promptString("Enter card holder name: ")
+			holderName, err := promptString(cmd, reader, "Enter card holder name: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read card number: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read card number: %w", err)
 			}
-			number, err := promptString("Enter card number: ")
+			number, err := promptString(cmd, reader, "Enter card number: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read card number: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read card number: %w", err)
 			}
-			expiryMonth, err := promptNumber("Enter expiry month: ")
+			expiryMonth, err := promptNumber(cmd, reader, "Enter expiry month: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read expiry month: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read expiry month: %w", err)
 			}
-			expiryYear, err := promptNumber("Enter expiry year: ")
+			expiryYear, err := promptNumber(cmd, reader, "Enter expiry year: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read expiry year: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read expiry year: %w", err)
 			}
-			fmt.Print("Enter CVC: ")
-			cvc, err := term.ReadPassword(int(os.Stdin.Fd()))
+			cvc, err := promptPassword(cmd, reader, "Enter CVC: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read CVC: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read CVC: %w", err)
 			}
-			fmt.Println()
+			cmd.Println()
 
 			resp, err := client.Create(context.Background(), &pb.CreateRequest{
 				Data: &pb.TypedData{
@@ -108,16 +102,16 @@ func NewCardCmd() *cobra.Command {
 							Number:      number,
 							ExpiryMonth: int32(expiryMonth),
 							ExpiryYear:  int32(expiryYear),
-							Cvv:         string(cvc),
+							Cvv:         cvc,
 						},
 					},
 				},
 			})
 			if err != nil {
-				fmt.Printf("Failed to create a new card: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create a new card: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	createCmd.Flags().StringP("path", "p", "", "Card path")
@@ -126,7 +120,7 @@ func NewCardCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete existing card",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
@@ -134,10 +128,10 @@ func NewCardCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Error deleting card: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error deleting card: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	deleteCmd.Flags().StringP("path", "p", "", "Card path")

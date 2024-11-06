@@ -10,6 +10,7 @@ import (
 
 	"gophkeeper.com/internal/client/grpc"
 	"gophkeeper.com/internal/client/jwt"
+	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
 type Config struct {
@@ -20,7 +21,7 @@ type Config struct {
 var (
 	cfgFile       string
 	config        Config
-	client        *grpc.GophkeeperClient
+	client        pb.GophkeeperServiceClient
 	tokenProvider *jwt.TokenProvider
 )
 

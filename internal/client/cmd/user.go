@@ -1,12 +1,13 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	"gophkeeper.com/internal/client/jwt"
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
@@ -21,27 +22,22 @@ func NewUserCmd() *cobra.Command {
 	registerCmd := &cobra.Command{
 		Use:   "register",
 		Short: "Register a new user",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			login, _ := cmd.Flags().GetString("login")
+			reader := bufio.NewReader(cmd.InOrStdin())
 
-			// Read password securely
-			fmt.Print("Enter password: ")
-			password, err := term.ReadPassword(int(os.Stdin.Fd()))
+			password, err := promptPassword(cmd, reader, "Enter password: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read password: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read password: %w", err)
 			}
-			fmt.Print("\nConfirm password: ")
-			confirm, err := term.ReadPassword(int(os.Stdin.Fd()))
+			confirm, err := promptPassword(cmd, reader, "Confirm password: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read password confirmation: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read password confirmation: %w", err)
 			}
-			fmt.Println()
+			cmd.Println()
 
-			if string(password) != string(confirm) {
-				fmt.Println("Passwords don't match")
-				os.Exit(1)
+			if password != confirm {
+				return errors.New("passwords don't match")
 			}
 
 			resp, err := client.Register(context.Background(), &pb.RegisterRequest{
@@ -49,15 +45,14 @@ func NewUserCmd() *cobra.Command {
 				Password: string(password),
 			})
 			if err != nil {
-				fmt.Printf("Failed to register: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("dailed to register: %w", err)
 			}
 			tokenData := jwt.NewToken(resp.GetAccessToken(), resp.GetRefreshToken())
 			if err = tokenProvider.SaveToken(tokenData); err != nil {
-				fmt.Printf("Failed to save token: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to save token: %w", err)
 			}
-			fmt.Print("Successfully registered")
+			cmd.Printf("User with login=%s successfully registered", login)
+			return nil
 		},
 	}
 	registerCmd.Flags().StringP("login", "l", "", "Username")
@@ -66,15 +61,14 @@ func NewUserCmd() *cobra.Command {
 	authCmd := &cobra.Command{
 		Use:   "auth",
 		Short: "Login to the service",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			login, _ := cmd.Flags().GetString("login")
+			reader := bufio.NewReader(cmd.InOrStdin())
 
-			fmt.Print("Enter password: ")
-			password, err := term.ReadPassword(int(os.Stdin.Fd()))
+			password, err := promptPassword(cmd, reader, "Enter password: ")
 			fmt.Println()
 			if err != nil {
-				fmt.Printf("Failed to read password: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read password: %w", err)
 			}
 
 			resp, err := client.Login(context.Background(), &pb.LoginRequest{
@@ -82,16 +76,15 @@ func NewUserCmd() *cobra.Command {
 				Password: string(password),
 			})
 			if err != nil {
-				fmt.Printf("Failed to login: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to login: %w", err)
 			}
 
 			tokenData := jwt.NewToken(resp.GetAccessToken(), resp.GetRefreshToken())
 			if err = tokenProvider.SaveToken(tokenData); err != nil {
-				fmt.Printf("Failed to save token: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to save token: %w", err)
 			}
-			fmt.Print("Successfully logged in")
+			cmd.Printf("Successfully logged in as %s", login)
+			return nil
 		},
 	}
 	authCmd.Flags().StringP("login", "l", "", "Username")
@@ -100,13 +93,13 @@ func NewUserCmd() *cobra.Command {
 	logoutCmd := &cobra.Command{
 		Use:   "logout",
 		Short: "Logout from the service",
-		Run: func(_ *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			err := os.Remove(config.TokenFile)
 			if err != nil && !os.IsNotExist(err) {
-				fmt.Printf("Failed to remove token: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to remove token: %w", err)
 			}
-			fmt.Print("Successfully logged out")
+			cmd.Print("Successfully logged out")
+			return nil
 		},
 	}
 	userCmd.AddCommand(registerCmd, authCmd, logoutCmd)

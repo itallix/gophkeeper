@@ -20,7 +20,7 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 	}
 }
 
-func (r *UserRepo) CreateUser(ctx context.Context, login, password_hash string) error {
+func (r *UserRepo) CreateUser(ctx context.Context, login, passwordHash string) error {
 	c, cancel := context.WithTimeout(ctx, TimeoutInSeconds*time.Second)
 	defer cancel()
 
@@ -32,7 +32,7 @@ func (r *UserRepo) CreateUser(ctx context.Context, login, password_hash string) 
 		password_hash
 	) VALUES($1, $2)`
 
-	_, err := r.pool.Exec(c, insertSQL, login, password_hash)
+	_, err := r.pool.Exec(c, insertSQL, login, passwordHash)
 	if err != nil {
 		return fmt.Errorf("%s failed to insert users: %w", errPrefix, err)
 	}

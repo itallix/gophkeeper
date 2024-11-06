@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
@@ -20,24 +20,24 @@ func NewLoginCmd() *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available logins",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			resp, err := client.List(context.Background(), &pb.ListRequest{
 				Type: pb.DataType_DATA_TYPE_LOGIN,
 			})
 			if err != nil {
-				fmt.Printf("Error listing logins: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error listing logins: %w", err)
 			}
 			for _, name := range resp.GetSecrets() {
-				fmt.Println(name)
+				cmd.Println(name)
 			}
+			return nil
 		},
 	}
 
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Retrieve login data by path",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Get(context.Background(), &pb.GetRequest{
@@ -45,14 +45,14 @@ func NewLoginCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Failed to retrieve login data: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to retrieve login data: %w", err)
 			}
-			fmt.Printf("Login: %s\n", resp.GetData().GetLogin().GetLogin())
-			fmt.Printf("Password: %s\n", resp.GetData().GetLogin().GetPassword())
-			fmt.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
-			fmt.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
-			fmt.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
+			cmd.Printf("Login: %s\n", resp.GetData().GetLogin().GetLogin())
+			cmd.Printf("Password: %s\n", resp.GetData().GetLogin().GetPassword())
+			cmd.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
+			cmd.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
+			cmd.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
+			return nil
 		},
 	}
 	getCmd.Flags().StringP("path", "p", "", "Login path")
@@ -61,31 +61,27 @@ func NewLoginCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new login secret",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
+			reader := bufio.NewReader(cmd.InOrStdin())
 
-			login, err := promptString("Enter login: ")
+			login, err := promptString(cmd, reader, "Enter login: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read login: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read login: %w", err)
 			}
-			fmt.Print("Enter password: ")
-			password, err := term.ReadPassword(int(os.Stdin.Fd()))
-			if err != nil {
-				fmt.Printf("\nFailed to read password: %v\n", err)
-				os.Exit(1)
-			}
-			fmt.Print("\nConfirm password: ")
-			confirm, err := term.ReadPassword(int(os.Stdin.Fd()))
-			if err != nil {
-				fmt.Printf("\nFailed to read password confirmation: %v\n", err)
-				os.Exit(1)
-			}
-			fmt.Println()
 
-			if string(password) != string(confirm) {
-				fmt.Println("Passwords don't match")
-				os.Exit(1)
+			password, err := promptPassword(cmd, reader, "Enter password: ")
+			if err != nil {
+				return fmt.Errorf("failed to read password: %w", err)
+			}
+			confirm, err := promptPassword(cmd, reader, "Confirm password: ")
+			if err != nil {
+				return fmt.Errorf("failed to read password confirmation: %w", err)
+			}
+			cmd.Println()
+
+			if password != confirm {
+				return errors.New("passwords don't match")
 			}
 
 			resp, err := client.Create(context.Background(), &pb.CreateRequest{
@@ -97,16 +93,16 @@ func NewLoginCmd() *cobra.Command {
 					Data: &pb.TypedData_Login{
 						Login: &pb.LoginData{
 							Login:    login,
-							Password: string(password),
+							Password: password,
 						},
 					},
 				},
 			})
 			if err != nil {
-				fmt.Printf("Failed to create a new login entry: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create a new login entry: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	createCmd.Flags().StringP("path", "p", "", "Login path")
@@ -115,7 +111,7 @@ func NewLoginCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete existing login entry",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
@@ -123,10 +119,10 @@ func NewLoginCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Error deleting login: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error deleting login: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	deleteCmd.Flags().StringP("path", "p", "", "Login path")

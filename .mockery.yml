@@ -8,3 +8,6 @@ packages:
   gophkeeper.com/internal/server:
     config:
       recursive: True
+  gophkeeper.com/pkg/generated/api/proto/v1:
+    config:
+      recursive: True

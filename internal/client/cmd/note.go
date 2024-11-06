@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -19,24 +19,24 @@ func NewNoteCmd() *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available notes",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			resp, err := client.List(context.Background(), &pb.ListRequest{
 				Type: pb.DataType_DATA_TYPE_NOTE,
 			})
 			if err != nil {
-				fmt.Printf("Error listing notes: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error listing notes: %w", err)
 			}
 			for _, name := range resp.GetSecrets() {
-				fmt.Println(name)
+				cmd.Println(name)
 			}
+			return nil
 		},
 	}
 
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Retrieve note data by path",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Get(context.Background(), &pb.GetRequest{
@@ -44,13 +44,13 @@ func NewNoteCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Failed to retrieve note data: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to retrieve note data: %w", err)
 			}
-			fmt.Printf("Note: %s\n", resp.GetData().GetNote().GetText())
-			fmt.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
-			fmt.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
-			fmt.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
+			cmd.Printf("Note: %s\n", resp.GetData().GetNote().GetText())
+			cmd.Printf("Created at: %s\n", resp.GetData().GetBase().GetCreatedAt())
+			cmd.Printf("Created by: %s\n", resp.GetData().GetBase().GetCreatedBy())
+			cmd.Printf("Metadata: %s\n", resp.GetData().GetBase().GetMetadata())
+			return nil
 		},
 	}
 	getCmd.Flags().StringP("path", "p", "", "Note path")
@@ -59,16 +59,16 @@ func NewNoteCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new note",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
+			reader := bufio.NewReader(cmd.InOrStdin())
 
 			// Read password securely
-			text, err := promptString("Enter note text: ")
+			text, err := promptString(cmd, reader, "Enter note text: ")
 			if err != nil {
-				fmt.Printf("\nFailed to read note text: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read note text: %w", err)
 			}
-			fmt.Println()
+			cmd.Println()
 
 			resp, err := client.Create(context.Background(), &pb.CreateRequest{
 				Data: &pb.TypedData{
@@ -84,10 +84,10 @@ func NewNoteCmd() *cobra.Command {
 				},
 			})
 			if err != nil {
-				fmt.Printf("Failed to create a new note: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create a new note: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	createCmd.Flags().StringP("path", "p", "", "Note path")
@@ -96,7 +96,7 @@ func NewNoteCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete existing note",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
@@ -104,10 +104,10 @@ func NewNoteCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Error deleting note: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error deleting note: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	deleteCmd.Flags().StringP("path", "p", "", "Note path")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -16,7 +17,14 @@ import (
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
-const chunkSize = 512 * 1024 // 0.5MB
+const (
+	chunkSize = 512 * 1024 // 0.5MB
+)
+
+var (
+	ErrChunkHash = errors.New("aborted upload due to chunk hash mismatch")
+	ErrFileHash  = errors.New("aborted upload due to file hash mismatch")
+)
 
 type FileHash struct {
 	mu     sync.Mutex
@@ -58,37 +66,35 @@ func NewBinaryCmd() *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List binaries",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			resp, err := client.List(context.Background(), &pb.ListRequest{
 				Type: pb.DataType_DATA_TYPE_BINARY,
 			})
 			if err != nil {
-				fmt.Printf("Error listing binaries: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error listing binaries: %w", err)
 			}
 			for _, name := range resp.GetSecrets() {
-				fmt.Println(name)
+				cmd.Println(name)
 			}
+			return nil
 		},
 	}
 
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Upload a new binary",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			fpath, _ := cmd.Flags().GetString("file")
 
 			file, err := os.Open(fpath)
 			if err != nil {
-				fmt.Printf("Failed to read a file: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read a file: %w", err)
 			}
 			defer file.Close()
 
 			stream, err := client.Upload(context.Background())
 			if err != nil {
-				fmt.Printf("failed to create upload stream: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create upload stream: %w", err)
 			}
 
 			fileHash := NewFileHash()
@@ -100,8 +106,7 @@ func NewBinaryCmd() *cobra.Command {
 					break
 				}
 				if err != nil {
-					fmt.Printf("failed to read file: %v\n", err)
-					os.Exit(1)
+					return fmt.Errorf("failed to read file: %w", err)
 				}
 
 				chunkData := buffer[:n]
@@ -115,13 +120,12 @@ func NewBinaryCmd() *cobra.Command {
 				}
 
 				if err = stream.Send(chunk); err != nil {
-					fmt.Printf("failed to send chunk: %v", err)
-					os.Exit(1)
+					return fmt.Errorf("failed to send chunk: %w", err)
 				}
-				fmt.Print(".")
+				cmd.Print(".")
 				chunkID++
 			}
-			fmt.Println()
+			cmd.Println()
 
 			if err = stream.Send(&pb.Chunk{
 				Data:     nil,
@@ -129,17 +133,16 @@ func NewBinaryCmd() *cobra.Command {
 				Hash:     fileHash.Complete(),
 				ChunkId:  chunkID,
 			}); err != nil {
-				fmt.Printf("failed to send chunk: %v", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to send chunk: %w", err)
 			}
 
 			resp, err := stream.CloseAndRecv()
 			if err != nil {
-				fmt.Printf("Failed to receive upload status: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to receive upload status: %w", err)
 			}
 
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	createCmd.Flags().StringP("file", "f", "", "Binary filepath")
@@ -148,14 +151,13 @@ func NewBinaryCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get binary data",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 			output, _ := cmd.Flags().GetString("output")
 
 			file, err := os.Create(output)
 			if err != nil {
-				fmt.Printf("Failed to create a new file: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create a new file: %w", err)
 			}
 			defer file.Close()
 
@@ -163,8 +165,7 @@ func NewBinaryCmd() *cobra.Command {
 				Filename: path,
 			})
 			if err != nil {
-				fmt.Printf("failed to create download stream: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create download stream: %w", err)
 			}
 
 			fileHash := NewFileHash()
@@ -172,40 +173,36 @@ func NewBinaryCmd() *cobra.Command {
 			for {
 				chunk, err := stream.Recv()
 				if err == io.EOF {
-					return
+					return nil
 				}
 				if err != nil {
-					fmt.Printf("failed to receive chunk: %v", err)
 					_ = os.Remove(file.Name())
-					os.Exit(1)
+					return fmt.Errorf("failed to receive chunk: %w", err)
 				}
 				if chunk.Data != nil {
 					currentHash := fileHash.AddChunk(chunk.GetChunkId(), chunk.GetData())
 					if chunk.GetHash() != currentHash {
-						fmt.Println("aborted upload due to chunk hash mismatch")
 						_ = os.Remove(file.Name())
-						os.Exit(1)
+						return ErrChunkHash
 					}
 					_, err = file.Write(chunk.GetData())
 					if err != nil {
-						fmt.Println("aborted due to error writing to file")
 						_ = os.Remove(file.Name())
-						os.Exit(1)
+						return fmt.Errorf("aborted due to error writing to file: %w", err)
 					}
 					i++
-					fmt.Print(".")
+					cmd.Print(".")
 				} else {
 					if chunk.GetHash() != fileHash.Complete() {
-						fmt.Println("aborted upload due to file hash mismatch")
 						_ = os.Remove(file.Name())
-						os.Exit(1)
+						return ErrFileHash
 					}
 					break
 				}
 			}
-			fmt.Println()
-
-			fmt.Printf("Download binary %s with %d chunks completed.\n", output, i)
+			cmd.Println()
+			cmd.Printf("Download binary %s with %d chunks completed.", output, i)
+			return nil
 		},
 	}
 	getCmd.Flags().StringP("path", "p", "", "Binary path")
@@ -216,7 +213,7 @@ func NewBinaryCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete binary",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 
 			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
@@ -224,10 +221,10 @@ func NewBinaryCmd() *cobra.Command {
 				Path: path,
 			})
 			if err != nil {
-				fmt.Printf("Error deleting binary: %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error deleting binary: %w", err)
 			}
-			fmt.Println(resp.GetMessage())
+			cmd.Println(resp.GetMessage())
+			return nil
 		},
 	}
 	deleteCmd.Flags().StringP("path", "p", "", "Binary path")

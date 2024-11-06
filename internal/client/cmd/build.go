@@ -3,7 +3,6 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
-	"os"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -16,7 +15,7 @@ func NewBuildCmd(version, date, commit string) *cobra.Command {
 	buildCmd := &cobra.Command{
 		Use:   "build",
 		Short: "Build information",
-		Run: func(cmd *cobra.Command, _ []string) {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			data := struct {
 				Version string
 				Date    string
@@ -29,15 +28,13 @@ func NewBuildCmd(version, date, commit string) *cobra.Command {
 
 			tmpl, err := template.New("buildInfo").Parse(buildInfoTpl)
 			if err != nil {
-				fmt.Printf("Error printing build info: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("error printing build info: %w", err)
 			}
 
-			err = tmpl.Execute(os.Stdout, data)
-			if err != nil {
-				fmt.Printf("Error printing build info: %s\n", err)
-				os.Exit(1)
+			if err = tmpl.Execute(cmd.OutOrStdout(), data); err != nil {
+				return fmt.Errorf("error printing build info: %w", err)
 			}
+			return nil
 		},
 	}
 

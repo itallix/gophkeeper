@@ -176,7 +176,7 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 	}
 
 	return &pb.CreateResponse{
-		Message: fmt.Sprintf("login with path=%s has been successfully created", path),
+		Message: fmt.Sprintf("secret with path=%s has been successfully created", path),
 	}, nil
 }
 
@@ -204,7 +204,7 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 	}
 
 	return &pb.DeleteResponse{
-		Message: fmt.Sprintf("login with path=%s has been successfully deleted", req.GetPath()),
+		Message: fmt.Sprintf("secret with path=%s has been successfully deleted", req.GetPath()),
 	}, nil
 }
 

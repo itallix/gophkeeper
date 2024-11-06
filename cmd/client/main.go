@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"log"
 
 	"gophkeeper.com/internal/client"
 )
@@ -15,7 +14,6 @@ var (
 
 func main() {
 	if err := client.Execute(buildVersion, buildDate, buildCommit); err != nil {
-		fmt.Printf("Error starting client: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error starting client: %s", err)
 	}
 }
