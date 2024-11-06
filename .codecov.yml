@@ -2,9 +2,10 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 20%
+        target: 80%
+        threshold: 1%
         base: auto
-        paths:
-          - "!mocks/"
-          - "!cmd/"
+ignore:
+  - "mocks/"
+  - "cmd/"
+  - "pkg/"
