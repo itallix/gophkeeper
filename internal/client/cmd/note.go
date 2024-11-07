@@ -16,23 +16,6 @@ func NewNoteCmd() *cobra.Command {
 		Short: "Note management commands",
 	}
 
-	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List available notes",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			resp, err := client.List(context.Background(), &pb.ListRequest{
-				Type: pb.DataType_DATA_TYPE_NOTE,
-			})
-			if err != nil {
-				return fmt.Errorf("error listing notes: %w", err)
-			}
-			for _, name := range resp.GetSecrets() {
-				cmd.Println(name)
-			}
-			return nil
-		},
-	}
-
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Retrieve note data by path",
@@ -93,25 +76,8 @@ func NewNoteCmd() *cobra.Command {
 	createCmd.Flags().StringP("path", "p", "", "Note path")
 	_ = createCmd.MarkFlagRequired("path")
 
-	deleteCmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete existing note",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			path, _ := cmd.Flags().GetString("path")
-
-			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
-				Type: pb.DataType_DATA_TYPE_NOTE,
-				Path: path,
-			})
-			if err != nil {
-				return fmt.Errorf("error deleting note: %w", err)
-			}
-			cmd.Println(resp.GetMessage())
-			return nil
-		},
-	}
-	deleteCmd.Flags().StringP("path", "p", "", "Note path")
-	_ = deleteCmd.MarkFlagRequired("path")
+	listCmd := NewListCmd("note", "List available notes", pb.DataType_DATA_TYPE_NOTE)
+	deleteCmd := NewDeleteCmd("note", "Delete existing note", pb.DataType_DATA_TYPE_NOTE)
 
 	noteCmd.AddCommand(listCmd, getCmd, createCmd, deleteCmd)
 

@@ -42,7 +42,7 @@ func NewUserCmd() *cobra.Command {
 
 			resp, err := client.Register(context.Background(), &pb.RegisterRequest{
 				Login:    login,
-				Password: string(password),
+				Password: password,
 			})
 			if err != nil {
 				return fmt.Errorf("dailed to register: %w", err)
@@ -66,14 +66,14 @@ func NewUserCmd() *cobra.Command {
 			reader := bufio.NewReader(cmd.InOrStdin())
 
 			password, err := promptPassword(cmd, reader, "Enter password: ")
-			fmt.Println()
+			cmd.Println()
 			if err != nil {
 				return fmt.Errorf("failed to read password: %w", err)
 			}
 
 			resp, err := client.Login(context.Background(), &pb.LoginRequest{
 				Login:    login,
-				Password: string(password),
+				Password: password,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to login: %w", err)

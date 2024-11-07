@@ -17,23 +17,6 @@ func NewLoginCmd() *cobra.Command {
 		Short: "Login management commands",
 	}
 
-	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List available logins",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			resp, err := client.List(context.Background(), &pb.ListRequest{
-				Type: pb.DataType_DATA_TYPE_LOGIN,
-			})
-			if err != nil {
-				return fmt.Errorf("error listing logins: %w", err)
-			}
-			for _, name := range resp.GetSecrets() {
-				cmd.Println(name)
-			}
-			return nil
-		},
-	}
-
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Retrieve login data by path",
@@ -108,25 +91,8 @@ func NewLoginCmd() *cobra.Command {
 	createCmd.Flags().StringP("path", "p", "", "Login path")
 	_ = createCmd.MarkFlagRequired("path")
 
-	deleteCmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete existing login entry",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			path, _ := cmd.Flags().GetString("path")
-
-			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
-				Type: pb.DataType_DATA_TYPE_LOGIN,
-				Path: path,
-			})
-			if err != nil {
-				return fmt.Errorf("error deleting login: %w", err)
-			}
-			cmd.Println(resp.GetMessage())
-			return nil
-		},
-	}
-	deleteCmd.Flags().StringP("path", "p", "", "Login path")
-	_ = deleteCmd.MarkFlagRequired("path")
+	listCmd := NewListCmd("login", "List available logins", pb.DataType_DATA_TYPE_LOGIN)
+	deleteCmd := NewDeleteCmd("login", "Delete existing login entry", pb.DataType_DATA_TYPE_LOGIN)
 
 	loginCmd.AddCommand(listCmd, getCmd, createCmd, deleteCmd)
 

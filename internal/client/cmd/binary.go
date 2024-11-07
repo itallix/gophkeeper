@@ -63,23 +63,6 @@ func NewBinaryCmd() *cobra.Command {
 		Short: "Binary management commands",
 	}
 
-	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List binaries",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			resp, err := client.List(context.Background(), &pb.ListRequest{
-				Type: pb.DataType_DATA_TYPE_BINARY,
-			})
-			if err != nil {
-				return fmt.Errorf("error listing binaries: %w", err)
-			}
-			for _, name := range resp.GetSecrets() {
-				cmd.Println(name)
-			}
-			return nil
-		},
-	}
-
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Upload a new binary",
@@ -102,7 +85,7 @@ func NewBinaryCmd() *cobra.Command {
 			chunkID := int32(0)
 			for {
 				n, err := file.Read(buffer)
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 				if err != nil {
@@ -172,7 +155,7 @@ func NewBinaryCmd() *cobra.Command {
 			var i = 0
 			for {
 				chunk, err := stream.Recv()
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					return nil
 				}
 				if err != nil {
@@ -210,25 +193,8 @@ func NewBinaryCmd() *cobra.Command {
 	_ = getCmd.MarkFlagRequired("file")
 	_ = getCmd.MarkFlagRequired("output")
 
-	deleteCmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete binary",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			path, _ := cmd.Flags().GetString("path")
-
-			resp, err := client.Delete(context.Background(), &pb.DeleteRequest{
-				Type: pb.DataType_DATA_TYPE_BINARY,
-				Path: path,
-			})
-			if err != nil {
-				return fmt.Errorf("error deleting binary: %w", err)
-			}
-			cmd.Println(resp.GetMessage())
-			return nil
-		},
-	}
-	deleteCmd.Flags().StringP("path", "p", "", "Binary path")
-	_ = deleteCmd.MarkFlagRequired("path")
+	listCmd := NewListCmd("binary", "List binaries", pb.DataType_DATA_TYPE_BINARY)
+	deleteCmd := NewDeleteCmd("binary", "Delete binary", pb.DataType_DATA_TYPE_BINARY)
 
 	binaryCmd.AddCommand(listCmd, createCmd, getCmd, deleteCmd)
 
