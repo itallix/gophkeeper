@@ -86,8 +86,8 @@ func WithPassword(password string) LoginOption {
 type CardOptions struct {
 	Number      string
 	CVC         string
-	ExpiryMonth int8
-	ExpiryYear  int16
+	ExpiryMonth int64
+	ExpiryYear  int64
 	CardHolder  string
 
 	SecretOptions
@@ -107,7 +107,7 @@ func WithCVC(cvc string) CardOption {
 	}
 }
 
-func WithExpiry(month int8, year int16) CardOption {
+func WithExpiry(month, year int64) CardOption {
 	return func(o *CardOptions) {
 		o.ExpiryMonth = month
 		o.ExpiryYear = year
@@ -138,7 +138,7 @@ func WithText(text string) NoteOption {
 // Binary-specific options.
 type BinaryOptions struct {
 	ChunkID int64
-	Chunks  int16
+	Chunks  int64
 	Hash    string
 	Data    []byte
 
@@ -153,7 +153,7 @@ func WithChunkID(chunkID int64) BinaryOption {
 	}
 }
 
-func WithChunks(chunks int16) BinaryOption {
+func WithChunks(chunks int64) BinaryOption {
 	return func(o *BinaryOptions) {
 		o.Chunks = chunks
 	}

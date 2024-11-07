@@ -153,8 +153,6 @@ func TestEncryptor_VisitCard(t *testing.T) {
 				assert.Equal(t, tt.expectedNumber, tt.card.Number)
 				assert.Equal(t, tt.expectedCvc, tt.card.CVC)
 			}
-
-			mockService.AssertExpectations(t)
 		})
 	}
 }
@@ -209,6 +207,61 @@ func TestEncryptor_VisitNote(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, []byte("encrypteddatakey"), tt.note.EncryptedDataKey)
 				assert.Equal(t, []byte("encryptedtext"), tt.note.Text)
+			}
+		})
+	}
+}
+
+func TestEncryptor_VisitBinary(t *testing.T) {
+	tests := []struct {
+		name        string
+		binary      *models.Binary
+		setupMock   func(*mocks.EncryptionService)
+		expectError bool
+	}{
+		{
+			name: "successful encryption",
+			binary: &models.Binary{
+				Data: []byte("mysecretdata"),
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					Encrypt(mock.Anything, mock.Anything).
+					Run(func(_ []byte, dst io.Writer) {
+						_, _ = dst.Write([]byte("encrypted"))
+					}).
+					Return([]byte("encrypteddatakey"), nil)
+			},
+			expectError: false,
+		},
+		{
+			name: "encryption failure",
+			binary: &models.Binary{
+				Data: []byte("mysecretdata"),
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					Encrypt(mock.Anything, mock.Anything).
+					Return(nil, errors.New("encryption failed"))
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockEncryptionService := mocks.NewEncryptionService(t)
+			tt.setupMock(mockEncryptionService)
+
+			visitor := operation.NewEncryptor(mockEncryptionService)
+			err := visitor.VisitBinary(tt.binary)
+
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, []byte("encrypteddatakey"), tt.binary.EncryptedDataKey)
+				assert.Equal(t, []byte("encrypted"), tt.binary.Data)
 			}
 		})
 	}

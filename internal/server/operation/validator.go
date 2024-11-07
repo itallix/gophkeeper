@@ -41,10 +41,10 @@ func (v *Validator) VisitLogin(login *models.Login) error {
 	return nil
 }
 
-func validateExpiry(month int8, year int16) error {
+func validateExpiry(month, year int64) error {
 	now := time.Now()
-	currentYear := int16(now.Year())
-	currentMonth := int8(now.Month())
+	currentYear := int64(now.Year())
+	currentMonth := int64(now.Month())
 
 	// Basic range checks
 	if month < 1 || month > 12 {

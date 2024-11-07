@@ -2,8 +2,9 @@ package grpc
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 
@@ -82,7 +83,7 @@ func (srv *GophkeeperServer) Register(ctx context.Context, req *pb.RegisterReque
 }
 
 // New method to handle token refresh.
-func (srv *GophkeeperServer) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.AuthResponse, error) {
+func (srv *GophkeeperServer) RefreshToken(_ context.Context, req *pb.RefreshTokenRequest) (*pb.AuthResponse, error) {
 	pair, err := srv.authService.RefreshTokens(req.GetRefreshToken())
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
@@ -100,7 +101,7 @@ func (srv *GophkeeperServer) RefreshToken(ctx context.Context, req *pb.RefreshTo
 	}, nil
 }
 
-func (srv *GophkeeperServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+func (srv *GophkeeperServer) List(_ context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	var secret models.Secret
 
 	switch req.GetType() {
@@ -112,6 +113,8 @@ func (srv *GophkeeperServer) List(ctx context.Context, req *pb.ListRequest) (*pb
 		secret = models.NewNote(nil, nil)
 	case pb.DataType_DATA_TYPE_BINARY:
 		secret = models.NewBinary(nil, nil)
+	case pb.DataType_DATA_TYPE_UNSPECIFIED:
+		return nil, status.Error(codes.Internal, "unspecified data type is not allowed")
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -157,7 +160,7 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 			[]models.CardOption{
 				models.WithCardHolder(cardData.GetCardHolder()),
 				models.WithCardNumber(cardData.GetNumber()),
-				models.WithExpiry(int8(cardData.GetExpiryMonth()), int16(cardData.GetExpiryYear())),
+				models.WithExpiry(cardData.GetExpiryMonth(), cardData.GetExpiryYear()),
 				models.WithCVC(cardData.GetCvv()),
 			})
 	case pb.DataType_DATA_TYPE_NOTE:
@@ -167,6 +170,10 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 				models.WithText(data.GetNote().GetText()),
 			},
 		)
+	case pb.DataType_DATA_TYPE_UNSPECIFIED:
+		return nil, status.Error(codes.Internal, "unspecified data type is not allowed")
+	case pb.DataType_DATA_TYPE_BINARY:
+		return nil, status.Error(codes.Internal, "binary data type is not allowed")
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetData().GetType())
 	}
@@ -180,7 +187,7 @@ func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) 
 	}, nil
 }
 
-func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (srv *GophkeeperServer) Delete(_ context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	var secret models.Secret
 	opts := []models.SecretOption{
 		models.WithPath(req.GetPath()),
@@ -195,6 +202,8 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 		secret = models.NewNote(opts, nil)
 	case pb.DataType_DATA_TYPE_BINARY:
 		secret = models.NewBinary(opts, nil)
+	case pb.DataType_DATA_TYPE_UNSPECIFIED:
+		return nil, status.Error(codes.Internal, "unspecified data type is not allowed")
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -208,7 +217,7 @@ func (srv *GophkeeperServer) Delete(ctx context.Context, req *pb.DeleteRequest) 
 	}, nil
 }
 
-func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
+func (srv *GophkeeperServer) Get(_ context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	var secret models.Secret
 	opts := []models.SecretOption{
 		models.WithPath(req.GetPath()),
@@ -221,6 +230,10 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 		secret = models.NewCard(opts, nil)
 	case pb.DataType_DATA_TYPE_NOTE:
 		secret = models.NewNote(opts, nil)
+	case pb.DataType_DATA_TYPE_UNSPECIFIED:
+		return nil, status.Error(codes.Internal, "unspecified data type is not allowed")
+	case pb.DataType_DATA_TYPE_BINARY:
+		return nil, status.Error(codes.Internal, "binary data type is not allowed")
 	default:
 		return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
 	}
@@ -231,7 +244,11 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 
 	switch req.GetType() {
 	case pb.DataType_DATA_TYPE_LOGIN:
-		login := secret.(*models.Login)
+		login, ok := secret.(*models.Login)
+		if !ok {
+			return nil, status.Errorf(codes.Internal,
+				"invalid type assertion: expected *models.Login, got %T", secret)
+		}
 		return &pb.GetResponse{
 			Data: &pb.TypedData{
 				Base: &pb.Metadata{
@@ -249,7 +266,11 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 			},
 		}, nil
 	case pb.DataType_DATA_TYPE_CARD:
-		card := secret.(*models.Card)
+		card, ok := secret.(*models.Card)
+		if !ok {
+			return nil, status.Errorf(codes.Internal,
+				"invalid type assertion: expected *models.Card, got %T", secret)
+		}
 		return &pb.GetResponse{
 			Data: &pb.TypedData{
 				Base: &pb.Metadata{
@@ -262,15 +283,19 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 					Card: &pb.CardData{
 						Number:      string(card.Number),
 						CardHolder:  card.CardholderName,
-						ExpiryMonth: int32(card.ExpiryMonth),
-						ExpiryYear:  int32(card.ExpiryYear),
+						ExpiryMonth: card.ExpiryMonth,
+						ExpiryYear:  card.ExpiryYear,
 						Cvv:         string(card.CVC),
 					},
 				},
 			},
 		}, nil
 	case pb.DataType_DATA_TYPE_NOTE:
-		note := secret.(*models.Note)
+		note, ok := secret.(*models.Note)
+		if !ok {
+			return nil, status.Errorf(codes.Internal,
+				"invalid type assertion: expected *models.Note, got %T", secret)
+		}
 		return &pb.GetResponse{
 			Data: &pb.TypedData{
 				Base: &pb.Metadata{
@@ -286,6 +311,10 @@ func (srv *GophkeeperServer) Get(ctx context.Context, req *pb.GetRequest) (*pb.G
 				},
 			},
 		}, nil
+	case pb.DataType_DATA_TYPE_UNSPECIFIED:
+		return nil, status.Error(codes.Internal, "unspecified data type is not allowed")
+	case pb.DataType_DATA_TYPE_BINARY:
+		return nil, status.Error(codes.Internal, "binary data type is not allowed")
 	}
 
 	return nil, status.Errorf(codes.Internal, "unknown data type: %v", req.GetType())
@@ -303,14 +332,14 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 	)
 	for {
 		chunk, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if chunk.Data == nil {
 			lastChunk = chunk
 			break
 		}
-		currentHash := md5.Sum(chunk.GetData())
+		currentHash := sha256.Sum256(chunk.GetData())
 		if chunk.GetHash() != hex.EncodeToString(currentHash[:]) {
 			return status.Error(codes.Aborted, "aborted upload due to chunk hash mismatch")
 		}
@@ -321,7 +350,7 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 				models.WithEncryptedDataKey(encDataKey),
 			},
 			[]models.BinaryOption{
-				models.WithChunkID(int64(chunk.GetChunkId())),
+				models.WithChunkID(chunk.GetChunkId()),
 				models.WithData(chunk.GetData()),
 			})
 		if err = srv.vault.StoreSecret(binary); err != nil {
@@ -339,7 +368,7 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 			models.WithEncryptedDataKey(encDataKey),
 		},
 		[]models.BinaryOption{
-			models.WithChunks(int16(lastChunk.GetChunkId())),
+			models.WithChunks(lastChunk.GetChunkId()),
 			models.WithHash(lastChunk.GetHash()),
 			models.WithData(nil),
 		},
@@ -348,7 +377,8 @@ func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) er
 		return status.Errorf(codes.Internal, "failed to store chunk: %v", err)
 	}
 	if err := stream.SendAndClose(&pb.UploadResponse{
-		Message: fmt.Sprintf("Upload of %s with %d chunks has been completed", lastChunk.GetFilename(), lastChunk.GetChunkId()),
+		Message: fmt.Sprintf("Upload of %s with %d chunks has been completed",
+			lastChunk.GetFilename(), lastChunk.GetChunkId()),
 	}); err != nil {
 		return status.Errorf(codes.Internal, "failed to close stream: %v", err)
 	}
@@ -373,7 +403,7 @@ func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.Gophkee
 				models.WithEncryptedDataKey(binary.EncryptedDataKey),
 			},
 			[]models.BinaryOption{
-				models.WithChunkID(int64(i)),
+				models.WithChunkID(i),
 				models.WithChunks(binary.Chunks),
 			},
 		)
@@ -381,11 +411,11 @@ func (srv *GophkeeperServer) Download(req *pb.DownloadRequest, stream pb.Gophkee
 			return status.Errorf(codes.Internal, "failed to retrieve chunk data: %v", err)
 		}
 		logger.Log().Infof("Download chunk: %d %d", chunk.ChunkID, len(chunk.Data))
-		chunkHash := md5.Sum(chunk.Data)
+		chunkHash := sha256.Sum256(chunk.Data)
 		if err := stream.Send(&pb.Chunk{
 			Filename: binary.Path,
 			Data:     chunk.Data,
-			ChunkId:  int32(chunk.ChunkID),
+			ChunkId:  chunk.ChunkID,
 			Hash:     hex.EncodeToString(chunkHash[:]),
 		}); err != nil {
 			return status.Errorf(codes.Internal, "failed to send chunk data: %v", err)

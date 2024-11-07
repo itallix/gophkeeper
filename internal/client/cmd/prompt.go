@@ -37,7 +37,7 @@ func promptPassword(cmd *cobra.Command, reader *bufio.Reader, prompt string) (st
 	// Check if cmd.InOrStdin() is a terminal
 	var fd int
 	if f, ok := cmd.InOrStdin().(*os.File); ok {
-		fd = int(f.Fd())
+		fd = int(f.Fd()) // #nosec G115
 	} else {
 		// cmd.InOrStdin() is not a file, fallback to non-terminal input
 		password, err := reader.ReadString('\n')

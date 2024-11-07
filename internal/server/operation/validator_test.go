@@ -72,8 +72,8 @@ func TestValidateLogin(t *testing.T) {
 }
 
 func TestVisitCard(t *testing.T) {
-	currentYear := int16(time.Now().Year())
-	currentMonth := int8(time.Now().Month())
+	currentYear := int64(time.Now().Year())
+	currentMonth := int64(time.Now().Month())
 
 	tests := []struct {
 		name     string

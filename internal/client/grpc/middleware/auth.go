@@ -17,7 +17,13 @@ var publicMethods = map[string]bool{
 }
 
 func AuthInterceptor(tokenProvider *jwt.TokenProvider) grpc.UnaryClientInterceptor {
-	return func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return func(
+		ctx context.Context,
+		method string,
+		req, reply interface{},
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption) error {
 		// Skip auth for login/register
 		if publicMethods[method] {
 			return invoker(ctx, method, req, reply, cc, opts...)

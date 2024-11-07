@@ -205,16 +205,7 @@ func (s *Creator) VisitBinary(binary *models.Binary) error {
 	ctx, cancel := context.WithTimeout(s.context, TimeoutInSeconds*time.Second)
 	defer cancel()
 
-	if !binary.IsLast() {
-		// write the chunk data to object storage
-		chunkName := fmt.Sprintf("%s/%d", binary.Path, binary.ChunkID)
-		_, err := s.objectStorage.Upload(ctx, BucketBinaries, chunkName, int64(len(binary.Data)),
-			bytes.NewReader(binary.Data))
-		if err != nil {
-			return err
-		}
-		logger.Log().Infof("Binary chunk with name=[%s] has been successfully stored.", chunkName)
-	} else {
+	if binary.IsLast() {
 		// record metadata in the database for the last element
 		errPrefix := "[CREATE BINARY]"
 		tx, err := s.pool.Begin(ctx)
@@ -252,8 +243,16 @@ func (s *Creator) VisitBinary(binary *models.Binary) error {
 		binary.BinaryID = binaryID
 
 		logger.Log().Infof("Binary metadata with path=[%s] has been successfully created.", binary.Path)
+		return nil
 	}
 
+	// write the chunk data to object storage
+	chunkName := fmt.Sprintf("%s/%d", binary.Path, binary.ChunkID)
+	if _, err := s.objectStorage.Upload(ctx, BucketBinaries, chunkName, int64(len(binary.Data)),
+		bytes.NewReader(binary.Data)); err != nil {
+		return err
+	}
+	logger.Log().Infof("Binary chunk with name=[%s] has been successfully stored.", chunkName)
 	return nil
 }
 

@@ -105,8 +105,8 @@ message LoginData {
 message CardData {
     string card_holder = 1;
     string number = 2;
-    int32 expiry_month = 3;
-    int32 expiry_year = 4;
+    int64 expiry_month = 3;
+    int64 expiry_year = 4;
     string cvv = 5;
 }
 
@@ -117,7 +117,7 @@ message NoteData {
 message Chunk {
     string filename = 1;
     bytes data = 2;
-    int32 chunk_id = 3;
+    int64 chunk_id = 3;
     string hash = 4;
 }
 

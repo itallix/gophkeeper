@@ -22,7 +22,7 @@ import (
 
 type config struct {
 	Address       string `env:"ADDRESS" envDefault:"localhost:8081"`
-	DatabaseDSN   string `env:"DATABASE_DSN" envDefault:"postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"`
+	DSN           string `env:"DB_DSN" envDefault:"postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"`
 	LogLevel      string `env:"LOG_LEVEL" envDefault:"DEBUG"`
 	AccessSecret  string `env:"ACCESS_SECRET" envDefault:"access_secret"`
 	RefreshSecret string `env:"REFRESH_SECRET" envDefault:"refresh_secret"`
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, cfg.DatabaseDSN)
+	pool, err := pgxpool.New(ctx, cfg.DSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize connection pool: %s", err)
 	}

@@ -75,8 +75,6 @@ func TestDecryptor_VisitLogin(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedPass, tt.login.Password)
 			}
-
-			mockService.AssertExpectations(t)
 		})
 	}
 }
@@ -180,8 +178,6 @@ func TestDecryptor_VisitCard(t *testing.T) {
 				assert.Equal(t, tt.expectedNumber, tt.card.Number)
 				assert.Equal(t, tt.expectedCvc, tt.card.CVC)
 			}
-
-			mockService.AssertExpectations(t)
 		})
 	}
 }
@@ -247,8 +243,71 @@ func TestDecryptor_VisitNote(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedText, tt.note.Text)
 			}
+		})
+	}
+}
 
-			mockService.AssertExpectations(t)
+func TestDecryptor_VisitBinary(t *testing.T) {
+	tests := []struct {
+		name         string
+		binary       *models.Binary
+		setupMock    func(*mocks.EncryptionService)
+		expectError  bool
+		expectedText []byte
+	}{
+		{
+			name: "successful decryption",
+			binary: &models.Binary{
+				Data: []byte("encrypted"),
+				SecretMetadata: models.SecretMetadata{
+					EncryptedDataKey: []byte("encrypteddatakey"),
+				},
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Run(func(_ []byte, dst io.Writer, _ []byte) {
+						_, _ = dst.Write([]byte("decrypted"))
+					}).
+					Return(nil).
+					Once()
+			},
+			expectError:  false,
+			expectedText: []byte("decrypted"),
+		},
+		{
+			name: "decryption failure",
+			binary: &models.Binary{
+				Data: []byte("encrypted"),
+				SecretMetadata: models.SecretMetadata{
+					EncryptedDataKey: []byte("encrypteddatakey"),
+				},
+			},
+			setupMock: func(m *mocks.EncryptionService) {
+				m.EXPECT().
+					Decrypt(mock.Anything, mock.Anything, []byte("encrypteddatakey")).
+					Return(errors.New("decryption failed")).
+					Once()
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := mocks.NewEncryptionService(t)
+			tt.setupMock(mockService)
+
+			visitor := operation.NewDecryptor(mockService)
+			err := visitor.VisitBinary(tt.binary)
+
+			if tt.expectError {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot decrypt binary")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedText, tt.binary.Data)
+			}
 		})
 	}
 }

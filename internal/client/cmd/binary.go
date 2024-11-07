@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
@@ -29,21 +30,21 @@ var (
 type FileHash struct {
 	mu     sync.Mutex
 	hash   hash.Hash
-	chunks map[int32]string
+	chunks map[int64]string
 }
 
 func NewFileHash() *FileHash {
 	return &FileHash{
-		hash:   md5.New(),
-		chunks: make(map[int32]string),
+		hash:   sha256.New(),
+		chunks: make(map[int64]string),
 	}
 }
 
-func (fh *FileHash) AddChunk(chunkID int32, data []byte) string {
+func (fh *FileHash) AddChunk(chunkID int64, data []byte) string {
 	fh.mu.Lock()
 	defer fh.mu.Unlock()
 
-	chunkHash := md5.Sum(data)
+	chunkHash := sha256.Sum256(data)
 	hexHash := hex.EncodeToString(chunkHash[:])
 	fh.chunks[chunkID] = hexHash
 	fh.hash.Write(data)
@@ -57,12 +58,7 @@ func (fh *FileHash) Complete() string {
 	return hex.EncodeToString(fh.hash.Sum(nil))
 }
 
-func NewBinaryCmd() *cobra.Command {
-	binaryCmd := &cobra.Command{
-		Use:   "binary",
-		Short: "Binary management commands",
-	}
-
+func newCreateBinaryCmd() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Upload a new binary",
@@ -82,10 +78,10 @@ func NewBinaryCmd() *cobra.Command {
 
 			fileHash := NewFileHash()
 			buffer := make([]byte, chunkSize)
-			chunkID := int32(0)
+			chunkID := int64(0)
 			for {
-				n, err := file.Read(buffer)
-				if errors.Is(err, io.EOF) {
+				n, readErr := file.Read(buffer)
+				if errors.Is(readErr, io.EOF) {
 					break
 				}
 				if err != nil {
@@ -130,19 +126,84 @@ func NewBinaryCmd() *cobra.Command {
 	}
 	createCmd.Flags().StringP("file", "f", "", "Binary filepath")
 	_ = createCmd.MarkFlagRequired("file")
+	return createCmd
+}
 
+// reassembleBinaryChunks reconstructs a binary file from a stream of chunks received via gRPC.
+// It creates a new file at the specified path and verifies the integrity of each chunk and the complete file
+// using hash checksums.
+//
+// The function writes chunks sequentially to the created file while maintaining a running hash.
+// If any error occurs during the process, it automatically cleans up by removing the incomplete file.
+// Progress is indicated by printing dots to the command output.
+//
+// Parameters:
+//   - filename: Path where the new file will be created
+//   - stream: gRPC stream providing ordered chunks of binary data
+//   - cmd: Cobra command instance for progress output
+//
+// Returns:
+//   - error: nil on successful reassembly, otherwise:
+//   - Wrapped error if file creation fails
+//   - ErrChunkHash if a chunk's hash verification fails
+//   - ErrFileHash if the complete file's hash verification fails
+//   - Wrapped error for I/O or stream reception failures
+//
+// Example:
+//
+//	err := reassembleBinaryChunks("output.bin", stream, cmd)
+//	if err != nil {
+//	    log.Printf("Failed to reassemble file: %v", err)
+//	}
+func reassembleBinaryChunks(filename string, stream grpc.ServerStreamingClient[pb.Chunk],
+	cmd *cobra.Command) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create a new file: %w", err)
+	}
+	defer file.Close()
+	fileHash := NewFileHash()
+	var i = 0
+	for {
+		chunk, recvErr := stream.Recv()
+		if errors.Is(recvErr, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			_ = os.Remove(file.Name())
+			return fmt.Errorf("failed to receive chunk: %w", err)
+		}
+		if chunk.Data != nil {
+			currentHash := fileHash.AddChunk(chunk.GetChunkId(), chunk.GetData())
+			if chunk.GetHash() != currentHash {
+				_ = os.Remove(file.Name())
+				return ErrChunkHash
+			}
+			_, err = file.Write(chunk.GetData())
+			if err != nil {
+				_ = os.Remove(file.Name())
+				return fmt.Errorf("aborted due to error writing to file: %w", err)
+			}
+			i++
+			cmd.Print(".")
+		} else {
+			if chunk.GetHash() != fileHash.Complete() {
+				_ = os.Remove(file.Name())
+				return ErrFileHash
+			}
+			break
+		}
+	}
+	return nil
+}
+
+func newGetBinaryCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get binary data",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			path, _ := cmd.Flags().GetString("path")
 			output, _ := cmd.Flags().GetString("output")
-
-			file, err := os.Create(output)
-			if err != nil {
-				return fmt.Errorf("failed to create a new file: %w", err)
-			}
-			defer file.Close()
 
 			stream, err := client.Download(context.Background(), &pb.DownloadRequest{
 				Filename: path,
@@ -151,40 +212,11 @@ func NewBinaryCmd() *cobra.Command {
 				return fmt.Errorf("failed to create download stream: %w", err)
 			}
 
-			fileHash := NewFileHash()
-			var i = 0
-			for {
-				chunk, err := stream.Recv()
-				if errors.Is(err, io.EOF) {
-					return nil
-				}
-				if err != nil {
-					_ = os.Remove(file.Name())
-					return fmt.Errorf("failed to receive chunk: %w", err)
-				}
-				if chunk.Data != nil {
-					currentHash := fileHash.AddChunk(chunk.GetChunkId(), chunk.GetData())
-					if chunk.GetHash() != currentHash {
-						_ = os.Remove(file.Name())
-						return ErrChunkHash
-					}
-					_, err = file.Write(chunk.GetData())
-					if err != nil {
-						_ = os.Remove(file.Name())
-						return fmt.Errorf("aborted due to error writing to file: %w", err)
-					}
-					i++
-					cmd.Print(".")
-				} else {
-					if chunk.GetHash() != fileHash.Complete() {
-						_ = os.Remove(file.Name())
-						return ErrFileHash
-					}
-					break
-				}
+			if err = reassembleBinaryChunks(output, stream, cmd); err != nil {
+				return err
 			}
 			cmd.Println()
-			cmd.Printf("Download binary %s with %d chunks completed.", output, i)
+			cmd.Printf("Binary %s has been successfully retrieved.", output)
 			return nil
 		},
 	}
@@ -192,11 +224,19 @@ func NewBinaryCmd() *cobra.Command {
 	getCmd.Flags().StringP("output", "o", "", "Output path")
 	_ = getCmd.MarkFlagRequired("file")
 	_ = getCmd.MarkFlagRequired("output")
+	return getCmd
+}
 
-	listCmd := NewListCmd("binary", "List binaries", pb.DataType_DATA_TYPE_BINARY)
-	deleteCmd := NewDeleteCmd("binary", "Delete binary", pb.DataType_DATA_TYPE_BINARY)
+func NewBinaryCmd() *cobra.Command {
+	binaryCmd := &cobra.Command{
+		Use:   "binary",
+		Short: "Binary management commands",
+	}
 
-	binaryCmd.AddCommand(listCmd, createCmd, getCmd, deleteCmd)
+	binaryCmd.AddCommand(
+		NewListCmd("binary", "List binaries", pb.DataType_DATA_TYPE_BINARY),
+		newCreateBinaryCmd(), newGetBinaryCmd(),
+		NewDeleteCmd("binary", "Delete binary", pb.DataType_DATA_TYPE_BINARY))
 
 	return binaryCmd
 }

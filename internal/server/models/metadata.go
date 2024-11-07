@@ -45,8 +45,8 @@ type Card struct {
 	CardID         int64
 	CardholderName string
 	Number         []byte
-	ExpiryMonth    int8
-	ExpiryYear     int16
+	ExpiryMonth    int64
+	ExpiryYear     int64
 	CVC            []byte
 
 	SecretMetadata
@@ -70,7 +70,7 @@ func (note *Note) Accept(v SecretVisitor) error {
 type Binary struct {
 	BinaryID int64
 	ChunkID  int64
-	Chunks   int16
+	Chunks   int64
 	Hash     string
 	Data     []byte
 

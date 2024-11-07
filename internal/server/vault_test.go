@@ -2,13 +2,12 @@ package server_test
 
 import (
 	"context"
-	"database/sql"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/golang-migrate/migrate/v4"
-	mp "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 	m "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -87,36 +86,18 @@ func (suite *VaultTestSuite) TearDownSuite() {
 	suite.Require().NoError(suite.postgresContainer.Terminate(ctx))
 }
 
-func (suite *VaultTestSuite) applyMigrations(dsn string) {
-	db, err := sql.Open("postgres", dsn)
-	suite.Require().NoError(err)
-	defer db.Close()
-
-	driver, err := mp.WithInstance(db, &mp.Config{})
-	suite.Require().NoError(err)
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://../../db/migrations",
-		"postgres",
-		driver,
-	)
-	suite.Require().NoError(err)
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		suite.Require().NoError(err)
-	}
-}
-
 func (suite *VaultTestSuite) TestVaultAPI() {
 	ctx := context.Background()
 	postgresEndpoint, err := suite.postgresContainer.Endpoint(ctx, "")
 	suite.Require().NoError(err)
 	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", postgresUser, postgresPassword,
 		postgresEndpoint, postgresDatabase)
-	suite.applyMigrations(dsn)
+	suite.Require().NoError(server.ApplyMigrations(dsn, "../../db/migrations"))
 	pool, err := pgxpool.New(ctx, dsn)
 	suite.Require().NoError(err)
+	minioEndpoint, err := suite.minioContainer.Endpoint(ctx, "")
+	suite.Require().NoError(err)
+	suite.T().Setenv("ENDPOINT", minioEndpoint)
 	objectStorage, err := s3.NewObjectStorage()
 	suite.Require().NoError(err)
 	kms, err := service.NewRSAKMS()
@@ -146,7 +127,8 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 		suite.Equal("leo", retrieved.Login)
 		suite.Equal("secret", string(retrieved.Password))
 
-		secrets, err := vault.ListSecrets(models.NewLogin(nil, nil))
+		var secrets []string
+		secrets, err = vault.ListSecrets(models.NewLogin(nil, nil))
 		suite.Require().NoError(err)
 		suite.Len(secrets, 1)
 
@@ -169,7 +151,7 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 			models.WithCardNumber("1122334455667788"),
 			models.WithCardHolder("Mark Aurelius"),
 			models.WithCVC("247"),
-			models.WithExpiry(8, int16(time.Now().Year()+2)),
+			models.WithExpiry(8, int64(time.Now().Year()+2)),
 		})
 		suite.Require().NoError(vault.StoreSecret(secret))
 
@@ -180,10 +162,11 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 		suite.Equal("1122334455667788", string(retrieved.Number))
 		suite.Equal("Mark Aurelius", retrieved.CardholderName)
 		suite.Equal("247", string(retrieved.CVC))
-		suite.Equal(int8(8), retrieved.ExpiryMonth)
-		suite.Equal(int16(time.Now().Year()+2), retrieved.ExpiryYear)
+		suite.Equal(int64(8), retrieved.ExpiryMonth)
+		suite.Equal(int64(time.Now().Year()+2), retrieved.ExpiryYear)
 
-		secrets, err := vault.ListSecrets(models.NewCard(nil, nil))
+		var secrets []string
+		secrets, err = vault.ListSecrets(models.NewCard(nil, nil))
 		suite.Require().NoError(err)
 		suite.Len(secrets, 1)
 
@@ -213,7 +196,8 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 		suite.Require().NoError(vault.RetrieveSecret(retrieved))
 		suite.Equal("lorem ipsum", string(retrieved.Text))
 
-		secrets, err := vault.ListSecrets(models.NewNote(nil, nil))
+		var secrets []string
+		secrets, err = vault.ListSecrets(models.NewNote(nil, nil))
 		suite.Require().NoError(err)
 		suite.Len(secrets, 1)
 
@@ -223,6 +207,62 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 		suite.Require().NoError(vault.DeleteSecret(deleted))
 
 		secrets, err = vault.ListSecrets(models.NewNote(nil, nil))
+		suite.Require().NoError(err)
+		suite.Empty(secrets)
+	})
+
+	suite.Run("binaries", func() {
+		calcHash := func(data []byte) string {
+			dataHash := sha256.Sum256(data)
+			return hex.EncodeToString(dataHash[:])
+		}
+
+		chunk := models.NewBinary([]models.SecretOption{
+			models.WithPath("binary0"),
+			models.WithCreatedBy(username),
+			models.WithModifiedBy(username),
+		}, []models.BinaryOption{
+			models.WithChunkID(0),
+			models.WithData([]byte("test data")),
+			models.WithHash(calcHash([]byte("test data"))),
+		})
+		suite.Require().NoError(vault.StoreSecret(chunk))
+		chunk = models.NewBinary([]models.SecretOption{
+			models.WithPath("binary0"),
+			models.WithCreatedBy(username),
+			models.WithModifiedBy(username),
+			models.WithEncryptedDataKey(chunk.EncryptedDataKey),
+		}, []models.BinaryOption{
+			models.WithChunks(1),
+			models.WithHash(calcHash([]byte("test data"))),
+		})
+		suite.Require().NoError(vault.StoreSecret(chunk))
+
+		retrieved := models.NewBinary([]models.SecretOption{
+			models.WithPath("binary0"),
+		}, nil)
+		suite.Require().NoError(vault.RetrieveSecret(retrieved))
+		suite.Equal(int64(1), retrieved.Chunks)
+		retrieved = models.NewBinary([]models.SecretOption{
+			models.WithPath("binary0"),
+			models.WithEncryptedDataKey(retrieved.EncryptedDataKey),
+		}, []models.BinaryOption{
+			models.WithChunks(retrieved.Chunks),
+		})
+		suite.Require().NoError(vault.RetrieveSecret(retrieved))
+		suite.Equal(retrieved.Data, []byte("test data"))
+
+		var secrets []string
+		secrets, err = vault.ListSecrets(models.NewBinary(nil, nil))
+		suite.Require().NoError(err)
+		suite.Len(secrets, 1)
+
+		deleted := models.NewBinary([]models.SecretOption{
+			models.WithPath("binary0"),
+		}, nil)
+		suite.Require().NoError(vault.DeleteSecret(deleted))
+
+		secrets, err = vault.ListSecrets(models.NewBinary(nil, nil))
 		suite.Require().NoError(err)
 		suite.Empty(secrets)
 	})

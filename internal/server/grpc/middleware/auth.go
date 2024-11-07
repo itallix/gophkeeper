@@ -12,6 +12,10 @@ import (
 	"gophkeeper.com/internal/server/service"
 )
 
+type contextKey string
+
+const usernameKey contextKey = "username"
+
 type AuthInterceptor struct {
 	authService   service.AuthenticationService
 	noAuthMethods map[string]bool // List of methods that don't require auth
@@ -52,7 +56,7 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
 
-		newCtx := context.WithValue(ctx, "username", username)
+		newCtx := context.WithValue(ctx, usernameKey, username)
 
 		return handler(newCtx, req)
 	}
@@ -73,7 +77,7 @@ func (i *AuthInterceptor) Stream() grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
+		_ *grpc.StreamServerInfo,
 		handler grpc.StreamHandler,
 	) error {
 		ctx := ss.Context()
@@ -88,7 +92,7 @@ func (i *AuthInterceptor) Stream() grpc.StreamServerInterceptor {
 			return status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
 
-		newCtx := context.WithValue(ctx, "username", username)
+		newCtx := context.WithValue(ctx, usernameKey, username)
 		wrapped := &serverStream{
 			ServerStream: ss, ctx: newCtx,
 		}

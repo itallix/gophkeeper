@@ -83,8 +83,8 @@ func NewCardCmd() *cobra.Command {
 						Card: &pb.CardData{
 							CardHolder:  holderName,
 							Number:      number,
-							ExpiryMonth: int32(expiryMonth),
-							ExpiryYear:  int32(expiryYear),
+							ExpiryMonth: int64(expiryMonth),
+							ExpiryYear:  int64(expiryYear),
 							Cvv:         cvc,
 						},
 					},

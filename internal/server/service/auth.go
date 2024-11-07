@@ -69,7 +69,8 @@ func NewJWTAuthService(userRepo *storage.UserRepo, accessTokenKey []byte,
 }
 
 // createToken generates a new JWT token with the specified claims.
-func (s *JWTAuthService) createToken(username string, tokenType TokenType, ttl time.Duration, key []byte) (string, error) {
+func (s *JWTAuthService) createToken(username string, tokenType TokenType, ttl time.Duration,
+	key []byte) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		Username: username,
