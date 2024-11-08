@@ -20,6 +20,10 @@ import (
 	pb "gophkeeper.com/pkg/generated/api/proto/v1"
 )
 
+type contextKey string
+
+const UsernameKey contextKey = "username"
+
 type GophkeeperServer struct {
 	authService service.AuthenticationService
 	authRepo    *storage.UserRepo
@@ -130,7 +134,7 @@ func (srv *GophkeeperServer) List(_ context.Context, req *pb.ListRequest) (*pb.L
 }
 
 func (srv *GophkeeperServer) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
-	username, ok := ctx.Value("username").(string)
+	username, ok := ctx.Value(UsernameKey).(string)
 	if !ok {
 		return nil, status.Error(codes.Internal, "username not found in context")
 	}
@@ -321,7 +325,7 @@ func (srv *GophkeeperServer) Get(_ context.Context, req *pb.GetRequest) (*pb.Get
 }
 
 func (srv *GophkeeperServer) Upload(stream pb.GophkeeperService_UploadServer) error {
-	username, ok := stream.Context().Value("username").(string)
+	username, ok := stream.Context().Value(UsernameKey).(string)
 	if !ok {
 		return status.Error(codes.Internal, "username not found in context")
 	}

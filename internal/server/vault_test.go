@@ -100,7 +100,7 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 	suite.T().Setenv("ENDPOINT", minioEndpoint)
 	objectStorage, err := s3.NewObjectStorage()
 	suite.Require().NoError(err)
-	kms, err := service.NewRSAKMS()
+	kms, err := service.NewRSAKMS("../../testdata/private.pem", "../../testdata/encrypted_key.bin")
 	suite.Require().NoError(err)
 	encryptionService := service.NewStandardEncryptionService(kms)
 	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)

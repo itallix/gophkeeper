@@ -21,11 +21,13 @@ import (
 )
 
 type config struct {
-	Address       string `env:"ADDRESS" envDefault:"localhost:8081"`
-	DSN           string `env:"DB_DSN" envDefault:"postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"`
-	LogLevel      string `env:"LOG_LEVEL" envDefault:"DEBUG"`
-	AccessSecret  string `env:"ACCESS_SECRET" envDefault:"access_secret"`
-	RefreshSecret string `env:"REFRESH_SECRET" envDefault:"refresh_secret"`
+	Address          string `env:"ADDRESS" envDefault:"localhost:8081"`
+	DSN              string `env:"DB_DSN" envDefault:"postgres://postgres:P@ssw0rd@localhost/gophkeeper?sslmode=disable"`
+	LogLevel         string `env:"LOG_LEVEL" envDefault:"DEBUG"`
+	AccessSecret     string `env:"ACCESS_SECRET" envDefault:"access_secret"`
+	RefreshSecret    string `env:"REFRESH_SECRET" envDefault:"refresh_secret"`
+	MasterKeyPath    string `env:"MASTER_KEY" envDefault:"testdata/private.pem"`
+	EncryptedKeyPath string `env:"ENCRYPTED_KEY" envDefault:"testdata/encrypted_key.bin"`
 }
 
 const (
@@ -54,7 +56,7 @@ func main() {
 		log.Fatalf("Failed to initialize object storage: %s", err)
 	}
 
-	kms, err := service.NewRSAKMS()
+	kms, err := service.NewRSAKMS(cfg.MasterKeyPath, cfg.EncryptedKeyPath)
 	if err != nil {
 		log.Fatalf("Failed to initialize kms: %s", err)
 	}

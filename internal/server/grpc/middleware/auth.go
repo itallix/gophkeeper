@@ -9,12 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	g "gophkeeper.com/internal/server/grpc"
 	"gophkeeper.com/internal/server/service"
 )
-
-type contextKey string
-
-const usernameKey contextKey = "username"
 
 type AuthInterceptor struct {
 	authService   service.AuthenticationService
@@ -56,7 +53,7 @@ func (i *AuthInterceptor) Unary() grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
 
-		newCtx := context.WithValue(ctx, usernameKey, username)
+		newCtx := context.WithValue(ctx, g.UsernameKey, username)
 
 		return handler(newCtx, req)
 	}
@@ -92,7 +89,7 @@ func (i *AuthInterceptor) Stream() grpc.StreamServerInterceptor {
 			return status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 		}
 
-		newCtx := context.WithValue(ctx, usernameKey, username)
+		newCtx := context.WithValue(ctx, g.UsernameKey, username)
 		wrapped := &serverStream{
 			ServerStream: ss, ctx: newCtx,
 		}
