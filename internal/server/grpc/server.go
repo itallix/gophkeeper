@@ -86,7 +86,6 @@ func (srv *GophkeeperServer) Register(ctx context.Context, req *pb.RegisterReque
 	}, nil
 }
 
-// New method to handle token refresh.
 func (srv *GophkeeperServer) RefreshToken(_ context.Context, req *pb.RefreshTokenRequest) (*pb.AuthResponse, error) {
 	pair, err := srv.authService.RefreshTokens(req.GetRefreshToken())
 	if err != nil {
