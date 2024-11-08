@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"errors"
+	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -33,38 +37,29 @@ type config struct {
 const (
 	AccessTokenTTLHours  = 1
 	RefreshTokenTTLHours = 24
+	ShutdownTimeoutSec   = 30
 )
 
-func main() {
-	var cfg config
-	if err := env.Parse(&cfg); err != nil {
-		log.Fatalf("Cannot parse config: %s", err)
-	}
-
-	if err := logger.Initialize(cfg.LogLevel); err != nil {
-		log.Fatalf("Cannot instantiate zap logger: %s", err)
-	}
-
-	ctx := context.Background()
+func createServer(ctx context.Context, cfg config) (*grpc.Server, net.Listener, error) {
 	pool, err := pgxpool.New(ctx, cfg.DSN)
 	if err != nil {
-		log.Fatalf("Failed to initialize connection pool: %s", err)
+		return nil, nil, fmt.Errorf("failed to initialize connection pool: %w", err)
 	}
 
 	objectStorage, err := s3.NewObjectStorage()
 	if err != nil {
-		log.Fatalf("Failed to initialize object storage: %s", err)
+		return nil, nil, fmt.Errorf("failed to initialize object storage: %w", err)
 	}
 
 	kms, err := service.NewRSAKMS(cfg.MasterKeyPath, cfg.EncryptedKeyPath)
 	if err != nil {
-		log.Fatalf("Failed to initialize kms: %s", err)
+		return nil, nil, fmt.Errorf("failed to initialize kms: %w", err)
 	}
 	encryptionService := service.NewStandardEncryptionService(kms)
 	vault := server.NewVaultImpl(ctx, pool, objectStorage, encryptionService)
 	lis, err := net.Listen("tcp", cfg.Address)
 	if err != nil {
-		log.Fatalf("failed to run gRPC server: %v", err)
+		return nil, nil, fmt.Errorf("failed liseting address: %w", err)
 	}
 	userRepo := storage.NewUserRepo(pool)
 	authService := service.NewJWTAuthService(userRepo, []byte(cfg.AccessSecret),
@@ -76,8 +71,70 @@ func main() {
 	)
 	pb.RegisterGophkeeperServiceServer(grpcServer, pgrpc.NewGophkeeperServer(vault, authService, userRepo))
 
-	logger.Log().Infof("Starting gRPC server %s...", cfg.Address)
-	if err = grpcServer.Serve(lis); err != nil {
-		log.Fatalf("cannot serve gRPC server: %v", err)
+	return grpcServer, lis, nil
+}
+
+func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	var cfg config
+	if err := env.Parse(&cfg); err != nil {
+		return fmt.Errorf("cannot parse config: %w", err)
+	}
+
+	if err := logger.Initialize(cfg.LogLevel); err != nil {
+		return fmt.Errorf("cannot instantiate zap logger: %w", err)
+	}
+	grpcServer, lis, err := createServer(ctx, cfg)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		logger.Log().Infof("Starting gRPC server %s...", cfg.Address)
+		if err = grpcServer.Serve(lis); err != nil && !errors.Is(err, net.ErrClosed) {
+			logger.Log().Errorf("failed to serve gRPC server: %v", err)
+			cancel()
+		}
+	}()
+
+	select {
+	case sig := <-sigChan:
+		logger.Log().Infof("Received signal: %v", sig)
+	case <-ctx.Done():
+		logger.Log().Info("Shutting down due to context cancellation")
+	}
+
+	logger.Log().Info("Initiating graceful shutdown...")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), ShutdownTimeoutSec*time.Second)
+	defer shutdownCancel()
+
+	done := make(chan bool)
+	go func() {
+		// Gracefully stop the gRPC server
+		grpcServer.GracefulStop()
+		done <- true
+	}()
+
+	// Wait for shutdown to complete or timeout
+	select {
+	case <-shutdownCtx.Done():
+		logger.Log().Warn("Shutdown timed out, forcing exit")
+		grpcServer.Stop()
+	case <-done:
+		logger.Log().Info("Graceful shutdown completed")
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		logger.Log().Fatal(err)
 	}
 }
