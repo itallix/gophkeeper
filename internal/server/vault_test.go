@@ -103,7 +103,7 @@ func (suite *VaultTestSuite) TestVaultAPI() {
 	kms, err := service.NewRSAKMS("../../testdata/private.pem", "../../testdata/encrypted_key.bin")
 	suite.Require().NoError(err)
 	encryptionService := service.NewStandardEncryptionService(kms)
-	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
+	vault := server.NewVaultImpl(ctx, pool, objectStorage, encryptionService)
 
 	userRepo := storage.NewUserRepo(pool)
 	username := "mark"

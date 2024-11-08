@@ -14,10 +14,20 @@ import (
 	"gophkeeper.com/internal/server/storage"
 )
 
-// Vault represents a secure storage system for managing secrets. It handles encryption,
-// storage, and retrieval of various types of sensitive data using a combination of
-// database storage and object storage.
-type Vault struct {
+// Vault defines the interface for secure secret management operations.
+// It provides methods for storing, retrieving, and managing different types of secrets
+// while handling encryption and secure storage automatically.
+type Vault interface {
+	StoreSecret(secret models.Secret) error
+	RetrieveSecret(secret models.Secret) error
+	DeleteSecret(secret models.Secret) error
+	ListSecrets(secret models.Secret) ([]string, error)
+}
+
+// VaultImpl implements the Vault interface using a combination of database storage
+// for metadata and object storage for binary data. It provides secure secret management
+// with encryption at rest.
+type VaultImpl struct {
 	ctx               context.Context
 	pool              *pgxpool.Pool
 	objectStorage     *s3.ObjectStorage
@@ -34,9 +44,9 @@ type Vault struct {
 //
 // Returns:
 //   - *Vault: A new instance of Vault initialized with the provided dependencies
-func NewVault(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectStorage,
-	encryptionService service.EncryptionService) *Vault {
-	return &Vault{
+func NewVaultImpl(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectStorage,
+	encryptionService service.EncryptionService) *VaultImpl {
+	return &VaultImpl{
 		ctx:               ctx,
 		pool:              pool,
 		objectStorage:     objectStorage,
@@ -52,7 +62,7 @@ func NewVault(ctx context.Context, pool *pgxpool.Pool, objectStorage *s3.ObjectS
 //
 // Returns:
 //   - error: nil if successful, otherwise an error describing what went wrong
-func (v *Vault) StoreSecret(secret models.Secret) error {
+func (v *VaultImpl) StoreSecret(secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
 		WithValidation().
 		WithEncryption(v.encryptionService).
@@ -73,7 +83,7 @@ func (v *Vault) StoreSecret(secret models.Secret) error {
 //
 // Returns:
 //   - error: nil if successful, otherwise an error describing what went wrong
-func (v *Vault) RetrieveSecret(secret models.Secret) error {
+func (v *VaultImpl) RetrieveSecret(secret models.Secret) error {
 	op := operation.NewProcessorBuilder().
 		WithStorageRetriever(v.ctx, v.pool, v.objectStorage).
 		WithDecryption(v.encryptionService).
@@ -93,7 +103,7 @@ func (v *Vault) RetrieveSecret(secret models.Secret) error {
 //
 // Returns:
 //   - error: nil if successful, otherwise an error describing what went wrong
-func (v *Vault) DeleteSecret(secret models.Secret) error {
+func (v *VaultImpl) DeleteSecret(secret models.Secret) error {
 	deleter := storage.NewDeleter(v.ctx, v.pool, v.objectStorage)
 
 	if err := secret.Accept(deleter); err != nil {
@@ -111,7 +121,7 @@ func (v *Vault) DeleteSecret(secret models.Secret) error {
 // Returns:
 //   - []string: A slice of secret identifiers
 //   - error: nil if successful, otherwise an error describing what went wrong
-func (v *Vault) ListSecrets(secret models.Secret) ([]string, error) {
+func (v *VaultImpl) ListSecrets(secret models.Secret) ([]string, error) {
 	lister := storage.NewLister(v.ctx, v.pool)
 
 	if err := secret.Accept(lister); err != nil {

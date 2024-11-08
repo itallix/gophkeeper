@@ -61,7 +61,7 @@ func main() {
 		log.Fatalf("Failed to initialize kms: %s", err)
 	}
 	encryptionService := service.NewStandardEncryptionService(kms)
-	vault := server.NewVault(ctx, pool, objectStorage, encryptionService)
+	vault := server.NewVaultImpl(ctx, pool, objectStorage, encryptionService)
 	lis, err := net.Listen("tcp", cfg.Address)
 	if err != nil {
 		log.Fatalf("failed to run gRPC server: %v", err)

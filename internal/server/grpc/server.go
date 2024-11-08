@@ -27,12 +27,12 @@ const UsernameKey contextKey = "username"
 type GophkeeperServer struct {
 	authService service.AuthenticationService
 	authRepo    *storage.UserRepo
-	vault       *server.Vault
+	vault       server.Vault
 
 	pb.UnimplementedGophkeeperServiceServer
 }
 
-func NewGophkeeperServer(vault *server.Vault, authService service.AuthenticationService,
+func NewGophkeeperServer(vault server.Vault, authService service.AuthenticationService,
 	authRepo *storage.UserRepo) *GophkeeperServer {
 	return &GophkeeperServer{
 		authService: authService,
