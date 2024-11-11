@@ -1,5 +1,7 @@
 module gophkeeper.com
 
+replace gophkeeper.com => github.com/itallix/gophkeeper v0.0.0
+
 go 1.23.0
 
 require (
