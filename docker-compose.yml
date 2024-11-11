@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  minio:
+    image: docker.io/bitnami/minio:2024
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    networks:
+      - tube
+    volumes:
+      - 'minio_data:/data'
+    environment:
+      - MINIO_ROOT_USER=superadmin
+      - MINIO_ROOT_PASSWORD=superpassword
+      - MINIO_DEFAULT_BUCKETS=binaries
+  postgres:
+    image: postgres:alpine
+    ports: 
+      - 5432:5432
+    networks:
+      - tube
+    volumes:
+       - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=P@ssw0rd
+      - POSTGRES_DB=gophkeeper
+    healthcheck:
+       test: ["CMD-SHELL", "pg_isready -U postgres -d gophkeeper"]
+       interval: 5s
+       timeout: 5s
+       retries: 5
+
+networks:
+  tube:
+    driver: bridge
+
+volumes:
+  minio_data:
+    driver: local
+  pgdata:
+    driver: local

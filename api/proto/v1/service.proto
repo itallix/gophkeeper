@@ -1,0 +1,130 @@
+syntax = "proto3";
+package api.v1;
+option go_package = "gophkeeper/pkg/generated/v1";
+
+service GophkeeperService {
+    // unauthenticated APIs
+    rpc Login(LoginRequest) returns (AuthResponse) {}
+    rpc Register(RegisterRequest) returns (AuthResponse) {}
+    rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse) {}
+
+    // authenticated APIs
+    rpc Create(CreateRequest) returns (CreateResponse) {}
+    rpc Get(GetRequest) returns (GetResponse) {}
+    rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+    rpc List(ListRequest) returns (ListResponse) {}
+
+    rpc Upload(stream Chunk) returns (UploadResponse) {}
+    rpc Download(DownloadRequest) returns (stream Chunk) {}
+}
+
+message RegisterRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message LoginRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+message AuthResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    string user_id = 3;
+}
+
+message CreateRequest {
+    TypedData data = 1;
+}
+
+message CreateResponse {
+    string message = 1;
+}
+
+message ListRequest {
+    DataType type = 1;
+}
+
+message ListResponse {
+    repeated string secrets = 1;
+}
+
+message GetRequest {
+    DataType type = 1;
+    string path = 2;
+}
+
+message GetResponse {
+    TypedData data = 1;
+}
+
+message DeleteRequest {
+    DataType type = 1;
+    string path = 2;
+}
+
+message DeleteResponse {
+    string message = 1;
+}
+
+enum DataType {
+    DATA_TYPE_UNSPECIFIED = 0;
+    DATA_TYPE_LOGIN = 1;
+    DATA_TYPE_CARD = 2;
+    DATA_TYPE_NOTE = 3;
+    DATA_TYPE_BINARY = 4;
+}
+
+message TypedData {
+    DataType type = 1;
+    Metadata base = 2;
+    oneof data {
+        LoginData login = 3;
+        CardData card = 4;
+        NoteData note = 5;
+    }
+}
+
+message Metadata {
+    string created_at = 1;
+    string created_by = 2;
+    string path = 3;
+    string metadata = 4;
+}
+
+message LoginData {
+    string login = 1;
+    string password = 2;
+}
+
+message CardData {
+    string card_holder = 1;
+    string number = 2;
+    int64 expiry_month = 3;
+    int64 expiry_year = 4;
+    string cvv = 5;
+}
+
+message NoteData {
+    string text = 1;
+}
+
+message Chunk {
+    string filename = 1;
+    bytes data = 2;
+    int64 chunk_id = 3;
+    string hash = 4;
+}
+
+message UploadResponse {
+    string message = 1;
+}
+
+message DownloadRequest {
+    string filename = 1;
+}
