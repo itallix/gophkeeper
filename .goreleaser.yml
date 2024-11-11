@@ -1,35 +1,40 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - main: ./cmd/client
+  - id: cli
+    main: ./cmd/client
     env:
       - CGO_ENABLED=0
     goos:
       - linux
+      - windows
+      - darwin
     goarch:
       - amd64
-      - arm
       - arm64
-    goarm:
-      - "6"
-      - "7"
+    ignore:
+      - goos: windows
+        goarch: arm64
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
+    binary: >-
+      {{ .ProjectName }}-{{ .Os }}-{{ .Arch }}
+      {{- if eq .Os "windows" }}.exe{{ end }}
 
 archives:
   - format: tar.gz
     name_template: >-
-      {{ .ProjectName }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
+      {{ .ProjectName }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}amd64
       {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
     files:
       - README.md
       - LICENSE*
