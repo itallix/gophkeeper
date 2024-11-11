@@ -1,9 +1,12 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - main: ./cmd/client
+  - id: cli
+    main: ./cmd/client
     env:
       - CGO_ENABLED=0
     goos:
