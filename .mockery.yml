@@ -5,9 +5,9 @@ outpkg: "{{.PackageName}}"
 filename: "{{.InterfaceName}}.go"
 all: True
 packages:
-  gophkeeper.com/internal/server:
+  github.com/itallix/gophkeeper/internal/server:
     config:
       recursive: True
-  gophkeeper.com/pkg/generated/api/proto/v1:
+  github.com/itallix/gophkeeper/pkg/generated/api/proto/v1:
     config:
       recursive: True

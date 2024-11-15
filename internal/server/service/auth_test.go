@@ -13,9 +13,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"golang.org/x/crypto/bcrypt"
 
-	"gophkeeper.com/internal/server"
-	"gophkeeper.com/internal/server/service"
-	"gophkeeper.com/internal/server/storage"
+	"github.com/itallix/gophkeeper/internal/server"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/storage"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )

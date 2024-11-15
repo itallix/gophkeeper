@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/operation"
-	mocks "gophkeeper.com/mocks/internal_/server/service"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/operation"
+	mocks "github.com/itallix/gophkeeper/mocks/internal_/server/service"
 )
 
 func TestDecryptor_VisitLogin(t *testing.T) {

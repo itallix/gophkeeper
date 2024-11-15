@@ -12,12 +12,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"gophkeeper.com/internal/server/grpc"
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/service"
-	mocksrv "gophkeeper.com/mocks/internal_/server"
-	mocks "gophkeeper.com/mocks/internal_/server/service"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/server/grpc"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	mocksrv "github.com/itallix/gophkeeper/mocks/internal_/server"
+	mocks "github.com/itallix/gophkeeper/mocks/internal_/server/service"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 func TestLogin(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	mocks "gophkeeper.com/mocks/pkg/generated/api/proto/v1"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	mocks "github.com/itallix/gophkeeper/mocks/pkg/generated/api/proto/v1"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 func TestLoginCommands(t *testing.T) {

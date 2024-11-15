@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gophkeeper.com/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/models"
 )
 
 type Lister struct {

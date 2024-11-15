@@ -1,6 +1,4 @@
-module gophkeeper.com
-
-replace gophkeeper.com => github.com/itallix/gophkeeper v0.0.0
+module github.com/itallix/gophkeeper
 
 go 1.23.0
 

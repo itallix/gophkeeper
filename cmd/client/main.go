@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"gophkeeper.com/internal/client"
+	"github.com/itallix/gophkeeper/internal/client"
 )
 
 var (

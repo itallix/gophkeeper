@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	"gophkeeper.com/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/models"
 )
 
 type Validator struct {

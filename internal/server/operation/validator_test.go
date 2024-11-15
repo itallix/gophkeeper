@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/operation"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/operation"
 )
 
 func TestValidateLogin(t *testing.T) {

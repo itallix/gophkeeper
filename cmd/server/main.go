@@ -14,14 +14,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 
-	"gophkeeper.com/internal/common/logger"
-	"gophkeeper.com/internal/server"
-	pgrpc "gophkeeper.com/internal/server/grpc"
-	"gophkeeper.com/internal/server/grpc/middleware"
-	"gophkeeper.com/internal/server/s3"
-	"gophkeeper.com/internal/server/service"
-	"gophkeeper.com/internal/server/storage"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/common/logger"
+	"github.com/itallix/gophkeeper/internal/server"
+	pgrpc "github.com/itallix/gophkeeper/internal/server/grpc"
+	"github.com/itallix/gophkeeper/internal/server/grpc/middleware"
+	"github.com/itallix/gophkeeper/internal/server/s3"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/storage"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 type config struct {

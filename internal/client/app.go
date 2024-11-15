@@ -3,7 +3,7 @@ package client
 import (
 	"github.com/spf13/cobra"
 
-	"gophkeeper.com/internal/client/cmd"
+	"github.com/itallix/gophkeeper/internal/client/cmd"
 )
 
 func Execute(version, date, commit string) error {

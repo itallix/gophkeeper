@@ -8,7 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"gophkeeper.com/internal/server/storage"
+	"github.com/itallix/gophkeeper/internal/server/storage"
 )
 
 var (

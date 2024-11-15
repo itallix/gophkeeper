@@ -6,10 +6,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/s3"
-	"gophkeeper.com/internal/server/service"
-	"gophkeeper.com/internal/server/storage"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/s3"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/storage"
 )
 
 type SecretProcessor struct {

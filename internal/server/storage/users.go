@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gophkeeper.com/internal/common/logger"
+	"github.com/itallix/gophkeeper/internal/common/logger"
 )
 
 type UserRepo struct {

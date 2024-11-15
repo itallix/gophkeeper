@@ -6,9 +6,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"gophkeeper.com/internal/client/grpc/middleware"
-	"gophkeeper.com/internal/client/jwt"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/client/grpc/middleware"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 type GophkeeperClient struct {

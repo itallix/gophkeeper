@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/client/jwt"
-	mocks "gophkeeper.com/mocks/pkg/generated/api/proto/v1"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
+	mocks "github.com/itallix/gophkeeper/mocks/pkg/generated/api/proto/v1"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 func TestUserCommands(t *testing.T) {

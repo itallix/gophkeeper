@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/server/service"
-	mocks "gophkeeper.com/mocks/internal_/server/service"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	mocks "github.com/itallix/gophkeeper/mocks/internal_/server/service"
 )
 
 func TestNewStandardEncryptionService(t *testing.T) {

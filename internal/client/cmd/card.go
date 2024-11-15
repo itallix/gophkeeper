@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 func NewCardCmd() *cobra.Command {

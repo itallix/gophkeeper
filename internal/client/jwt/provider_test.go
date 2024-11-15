@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/client/jwt"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
 )
 
 func TestNewToken(t *testing.T) {

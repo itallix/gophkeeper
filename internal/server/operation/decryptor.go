@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap/buffer"
 
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/service"
 )
 
 type Decryptor struct {

@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"gophkeeper.com/internal/client/jwt"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 func NewUserCmd() *cobra.Command {

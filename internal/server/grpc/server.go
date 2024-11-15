@@ -12,12 +12,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"gophkeeper.com/internal/common/logger"
-	"gophkeeper.com/internal/server"
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/service"
-	"gophkeeper.com/internal/server/storage"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/common/logger"
+	"github.com/itallix/gophkeeper/internal/server"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/storage"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 type contextKey string

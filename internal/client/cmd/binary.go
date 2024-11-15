@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 const (

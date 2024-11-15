@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"gophkeeper.com/internal/client/grpc"
-	"gophkeeper.com/internal/client/jwt"
-	pb "gophkeeper.com/pkg/generated/api/proto/v1"
+	"github.com/itallix/gophkeeper/internal/client/grpc"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
+	pb "github.com/itallix/gophkeeper/pkg/generated/api/proto/v1"
 )
 
 type Config struct {

@@ -8,9 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"gophkeeper.com/internal/common/logger"
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/s3"
+	"github.com/itallix/gophkeeper/internal/common/logger"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/s3"
 )
 
 type Retriever struct {

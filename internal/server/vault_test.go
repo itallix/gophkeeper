@@ -17,11 +17,11 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"gophkeeper.com/internal/server"
-	"gophkeeper.com/internal/server/models"
-	"gophkeeper.com/internal/server/s3"
-	"gophkeeper.com/internal/server/service"
-	"gophkeeper.com/internal/server/storage"
+	"github.com/itallix/gophkeeper/internal/server"
+	"github.com/itallix/gophkeeper/internal/server/models"
+	"github.com/itallix/gophkeeper/internal/server/s3"
+	"github.com/itallix/gophkeeper/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/storage"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )

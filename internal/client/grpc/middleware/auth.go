@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"gophkeeper.com/internal/client/jwt"
+	"github.com/itallix/gophkeeper/internal/client/jwt"
 )
 
 var publicMethods = map[string]bool{

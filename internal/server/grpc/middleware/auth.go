@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	g "gophkeeper.com/internal/server/grpc"
-	"gophkeeper.com/internal/server/service"
+	g "github.com/itallix/gophkeeper/internal/server/grpc"
+	"github.com/itallix/gophkeeper/internal/server/service"
 )
 
 type AuthInterceptor struct {

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gophkeeper.com/internal/server/service"
+	"github.com/itallix/gophkeeper/internal/server/service"
 )
 
 func TestNewRSAKMS(t *testing.T) {
